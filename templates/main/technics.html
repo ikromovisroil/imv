@@ -69,7 +69,14 @@
 
           <div class="card">
             <div class="card-body">
-              <h5 class="card-title">{{ category.name }} — <span class="text-muted">{{ technics.count }} ta texnika</span></h5>
+              <h5 class="card-title">
+                {% if category %}
+                    {{ category.name }} — <span class="text-muted">{{ technics.count }} ta texnika</span>
+                {% else %}
+                    Hammasi — <span class="text-muted">{{ technics.count }} ta texnika</span>
+                {% endif %}
+              </h5>
+
 
               <!-- Table with stripped rows -->
               <table class="table datatable">
@@ -81,6 +88,7 @@
                       <th>Seriya raqami</th>
                       <th>MAC</th>
                       <th>IP</th>
+                      <th>Yil</th>
                       <th>Izoh</th>
                     </tr>
                   </thead>
@@ -93,6 +101,7 @@
                       <td>{{ te.serial|default:"-" }}</td>
                       <td>{{ te.moc|default:"-" }}</td>
                       <td>{{ te.ip|default:"-" }}</td>
+                      <td>{{ te.year|default:"-" }}</td>
                       <td>{{ te.body|default:"-" }}</td>
                     </tr>
                     {% empty %}

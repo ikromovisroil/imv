@@ -125,6 +125,7 @@ class Technics(models.Model):
     serial = models.CharField(max_length=100,null=True,blank=True)
     moc = models.CharField(max_length=100, null=True, blank=True)
     ip = models.CharField(max_length=100,null=True,blank=True)
+    year = models.CharField(max_length=50,null=True,blank=True)
     body = models.CharField(max_length=500,null=True,blank=True)
     is_staff = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
@@ -137,3 +138,26 @@ class Technics(models.Model):
 
     class Meta:
         db_table = 'technics'
+
+from django.db import models
+from django.contrib.auth.models import User
+
+class ActivityLog(models.Model):
+    ACTION_TYPES = [
+        ('create', 'Qo‘shildi'),
+        ('update', 'O‘zgartirildi'),
+        ('delete', 'O‘chirildi'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    action = models.CharField(max_length=20, choices=ACTION_TYPES)
+    model_name = models.CharField(max_length=50)
+    object_name = models.CharField(max_length=100, blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.user} {self.get_action_display()} {self.model_name} - {self.object_name}"
