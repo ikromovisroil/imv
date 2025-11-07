@@ -163,7 +163,6 @@ def document(request):
             # 🔄 Oddiy matnni almashtirish + formatlash
             for paragraph in doc.paragraphs:
                 for run in paragraph.runs:
-                    print(run.text)
                     for old, new in replacements.items():
                         if old in run.text:
                             run.text = run.text.replace(old, new)

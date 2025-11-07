@@ -3,7 +3,7 @@ from django.db import models
 
 # Tashkilot.
 class Organization(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True)
     date_creat = models.DateField(auto_now_add=True)
@@ -18,7 +18,7 @@ class Organization(models.Model):
 
 # Viloyat.
 class Region(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
     date_creat = models.DateField(auto_now_add=True)
@@ -35,7 +35,7 @@ class Region(models.Model):
 class Department(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.SET_NULL,null=True,blank=True)
     region = models.ForeignKey(Region, on_delete=models.SET_NULL,null=True,blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
     date_creat = models.DateField(auto_now_add=True)
@@ -51,7 +51,7 @@ class Department(models.Model):
 # Shtat.
 class Position(models.Model):
     department = models.ForeignKey(Department, on_delete=models.SET_NULL,null=True,blank=True)
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
     date_creat = models.DateField(auto_now_add=True)
@@ -66,7 +66,7 @@ class Position(models.Model):
 
 # Lavozim.
 class Rank(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
     date_creat = models.DateField(auto_now_add=True)
@@ -102,7 +102,7 @@ class Employee(models.Model):
 
 # Category.
 class Category(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
     date_creat = models.DateField(auto_now_add=True)
