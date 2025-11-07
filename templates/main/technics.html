@@ -75,34 +75,35 @@
                 {% else %}
                     Hammasi — <span class="text-muted">{{ technics.count }} ta texnika</span>
                 {% endif %}
-              </h5>
-
+            </h5>
 
               <!-- Table with stripped rows -->
               <table class="table datatable">
                   <thead>
                     <tr>
                       <th>#</th>
+                      <th>Lavozim</th>
                       <th>F.I.O</th>
                       <th>Texnika nomi</th>
-                      <th>Seriya raqami</th>
-                      <th>MAC</th>
+                      <th>I/N</th>
+                      <th>S/N</th>
                       <th>IP</th>
-                      <th>Yil</th>
-                      <th>Izoh</th>
+                      <th>MAC</th>
+                      <th>YIL</th>
                     </tr>
                   </thead>
                   <tbody>
                     {% for te in technics %}
                     <tr>
                       <th scope="row">{{ forloop.counter }}</th>
-                      <td>{{ te.employee.full_name|default:"Biriktirilmagan" }}</td>
-                      <td>{{ te.name|default:"-" }}</td>
-                      <td>{{ te.serial|default:"-" }}</td>
-                      <td>{{ te.moc|default:"-" }}</td>
-                      <td>{{ te.ip|default:"-" }}</td>
-                      <td>{{ te.year|default:"-" }}</td>
-                      <td>{{ te.body|default:"-" }}</td>
+                      <td>{{ te.employee.rank|default:" " }}</td>
+                      <td>{{ te.employee.full_name|default:" " }}</td>
+                      <td>{{ te.category }} ({{ te.name }})|default:" "</td>
+                      <td>{{ te.inventory|default:" " }}</td>
+                      <td>{{ te.serial|default:" " }}</td>
+                      <td>{{ te.ip|default:" " }}</td>
+                      <td>{{ te.moc|default:" " }}</td>
+                      <td>{{ te.year|default:" " }}</td>
                     </tr>
                     {% empty %}
                     <tr>

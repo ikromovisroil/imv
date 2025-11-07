@@ -121,7 +121,7 @@ class Technics(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL,null=True,blank=True)
     employee = models.ForeignKey(Employee, on_delete=models.SET_NULL,null=True,blank=True)
     name = models.CharField(max_length=100)
-    model = models.CharField(max_length=100,null=True,blank=True)
+    inventory = models.CharField(max_length=100,null=True,blank=True)
     serial = models.CharField(max_length=100,null=True,blank=True)
     moc = models.CharField(max_length=100, null=True, blank=True)
     ip = models.CharField(max_length=100,null=True,blank=True)

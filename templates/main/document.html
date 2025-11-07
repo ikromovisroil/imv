@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+    <title>document</title>
+{% endblock title %}
+
+{% block css %}
+{% endblock css %}
+
+{% block content %}
+
+ <main id="main" class="main">
+
+    <div class="pagetitle">
+      <h1>Dalolatnoma</h1>
+    </div><!-- End Page Title -->
+
+    <section class="section">
+      <div class="row">
+        <div class="col-lg-3">
+
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">Vertical Form</h5>
+
+              <!-- Vertical Form -->
+              <form class="row g-3" method="POST">{% csrf_token %}
+                <div class="col-12">
+                  <label for="organization" class="form-label">Tashkilot</label>
+                    <select id="organization" name="organization" class="form-select">
+                        <option value="">Tanlang...</option>
+                        {% for org in organizations %}
+                            <option value="{{ org.id }}" {% if selected_org == org.id|stringformat:"s" %}selected{% endif %}>{{ org.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                  <label for="department" class="form-label">Boshqarma</label>
+                    <select id="department" name="department" class="form-select">
+                        <option value="">Tanlang...</option>
+                        {% for dep in departments %}
+                            <option value="{{ dep.id }}" {% if selected_dep == dep.id|stringformat:"s" %}selected{% endif %}>{{ dep.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                  <label for="position" class="form-label">Bo‘lim</label>
+                    <select id="position" name="position" class="form-select">
+                        <option value="">Tanlang...</option>
+                        {% for pos in positions %}
+                            <option value="{{ pos.id }}" {% if selected_pos == pos.id|stringformat:"s" %}selected{% endif %}>{{ pos.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="text-center">
+                  <button type="submit" class="btn btn-primary w-100">Qidirish</button>
+                </div>
+              </form><!-- Vertical Form -->
+
+            </div>
+          </div>
+
+        </div>
+
+        <div class="col-lg-9">
+
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">TinyMCE Editor</h5>
+
+              <!-- TinyMCE Editor -->
+              <textarea class="tinymce-editor">
+                {{ file_content|safe }}
+              </textarea><!-- End TinyMCE Editor -->
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main><!-- End #main -->
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function(){
+
+    function loadDepartments(orgId, selectedDepId=null){
+        $('#department').html('<option value="">Yuklanmoqda...</option>');
+        $('#position').html('<option value="">Tanlang...</option>');
+
+        if(orgId){
+            $.ajax({
+                url: "{% url 'ajax_load_departments' %}",
+                data: {'organization': orgId},
+                success: function(data){
+                    var options = '<option value="">Tanlang...</option>';
+                    $.each(data, function(i, dep){
+                        var selected = (dep.id == selectedDepId) ? 'selected' : '';
+                        options += `<option value="${dep.id}" ${selected}>${dep.name}</option>`;
+                    });
+                    $('#department').html(options);
+                }
+            });
+        } else {
+            $('#department').html('<option value="">Tanlang...</option>');
+        }
+    }
+
+    function loadPositions(depId, selectedPosId=null){
+        $('#position').html('<option value="">Yuklanmoqda...</option>');
+        if(depId){
+            $.ajax({
+                url: "{% url 'ajax_load_positions' %}",
+                data: {'department': depId},
+                success: function(data){
+                    var options = '<option value="">Tanlang...</option>';
+                    $.each(data, function(i, pos){
+                        var selected = (pos.id == selectedPosId) ? 'selected' : '';
+                        options += `<option value="${pos.id}" ${selected}>${pos.name}</option>`;
+                    });
+                    $('#position').html(options);
+                }
+            });
+        } else {
+            $('#position').html('<option value="">Tanlang...</option>');
+        }
+    }
+
+    $('#organization').change(function(){
+        loadDepartments($(this).val());
+    });
+
+    $('#department').change(function(){
+        loadPositions($(this).val());
+    });
+
+    // Oldindan tanlangan qiymatlarni sahifa yuklanganda qo‘shish
+    var initialOrg = '{{ selected_org }}';
+    var initialDep = '{{ selected_dep }}';
+    var initialPos = '{{ selected_pos }}';
+
+    if(initialOrg){
+        $('#organization').val(initialOrg);
+        loadDepartments(initialOrg, initialDep);
+        if(initialDep){
+            loadPositions(initialDep, initialPos);
+        }
+    }
+});
+</script>
+
+{% endblock content %}
+
+{% block js %}
+{% endblock js %}
