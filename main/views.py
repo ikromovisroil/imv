@@ -157,21 +157,23 @@ def document(request):
                 'DEPARTMENT': dep_name,
                 'ORGANIZATION': org_name,
                 'POSITION': pos_name,
+                'STIL': dep_name,
             }
 
             # 🔄 Oddiy matnni almashtirish + formatlash
-            # for paragraph in doc.paragraphs:
-            #     for run in paragraph.runs:
-            #         for old, new in replacements.items():
-            #             if old in run.text:
-            #                 run.text = run.text.replace(old, new)
-            #
-            #                 # 🎨 Formatlash — faqat DEPARTMENTS uchun
-            #                 if old == 'DEPARTMENT':
-            #                     run.font.bold = True
-            #                     run.font.size = Pt(12)
-            #                     run.font.name = 'Times New Roman'
-            #                     run.font.color.rgb = RGBColor(0, 0, 128)  # to‘q ko‘k rang
+            for paragraph in doc.paragraphs:
+                for run in paragraph.runs:
+                    print(run.text)
+                    for old, new in replacements.items():
+                        if old in run.text:
+                            run.text = run.text.replace(old, new)
+
+                            # 🎨 Formatlash — faqat DEPARTMENTS uchun
+                            if old == 'STIL':
+                                run.font.bold = True
+                                run.font.size = Pt(12)
+                                run.font.name = 'Times New Roman'
+                                # run.font.color.rgb = RGBColor(0, 0, 128)  # to‘q ko‘k rang
 
             # 🔄 Text box (shape) ichidagi matnni almashtirish
             replace_text_in_textboxes(doc.element.body, replacements)
