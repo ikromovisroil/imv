@@ -5,7 +5,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db.models import Q
-from django.db.models import Count
+from django.db.models import Count, Prefetch
+
 
 # technics ni categoriya bo'yicha qidirish .
 def technics(request, pk=None):
@@ -71,14 +72,25 @@ def ajax_load_positions(request):
     return JsonResponse(list(positions), safe=False)
 
 
-
 def organization(request, pk):
     organization = get_object_or_404(Organization, pk=pk)
-    departments = (
-        Department.objects
-        .filter(organization=organization)
-        .prefetch_related('position_set__employee_set__technics_set')
+
+    # Bo‘limlar (Position) uchun texnika sonini hisoblash
+    positions_qs = Position.objects.annotate(
+        technics_count=Count('employee__technics')
+    ).prefetch_related(
+        'employee_set__technics_set'
     )
+
+    # Boshqarma (Department) bo‘yicha texnika soni va bo‘limlarni ulash
+    departments = Department.objects.filter(organization=organization) \
+        .annotate(
+        technics_count=Count('position__employee__technics', distinct=True)+Count('employee__technics', distinct=True),
+    ) \
+        .prefetch_related(
+        Prefetch('position_set', queryset=positions_qs)
+    )
+
     context = {
         'organization': organization,
         'departments': departments,
@@ -86,6 +98,8 @@ def organization(request, pk):
         'organizations': Organization.objects.all(),
     }
     return render(request, 'main/organization.html', context)
+
+
 
 
 
