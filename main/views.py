@@ -14,6 +14,8 @@ from django.conf import settings
 from docx.oxml.ns import qn
 from docx.shared import Pt
 from docx.shared import Pt, RGBColor
+from datetime import datetime, date
+
 
 def technics(request, pk=None):
     # Category filter
@@ -132,11 +134,22 @@ def replace_text_in_textboxes(element, replacements):
 
 
 def document(request):
-    if request.method == 'POST':
-        org_id = request.POST.get('organization') or None
-        dep_id = request.POST.get('department') or None
-        pos_id = request.POST.get('position') or None
+    oylar = [
+        "yanvarda", "fevralda", "martda", "aprelda", "mayda", "iyunda",
+        "iyulda", "avgustda", "sentabrda", "oktabrda", "noyabrda", "dekabrda"
+    ]
 
+    if request.method == 'POST':
+        org_id = request.POST.get('organization')
+        dep_id = request.POST.get('department')
+        pos_id = request.POST.get('position')
+        post_id = request.POST.get('post_id')
+        fio_id = request.POST.get('fio_id')
+        date_id = request.POST.get('date_id')
+        namber_id = request.POST.get('namber_id')
+        rim_id = request.POST.get('rim_id')
+
+        # Modeldan tanlangan obyektlarni olish
         org = Organization.objects.filter(id=org_id).first() if org_id else None
         dep = Department.objects.filter(id=dep_id).first() if dep_id else None
         pos = Position.objects.filter(id=pos_id).first() if pos_id else None
@@ -145,7 +158,22 @@ def document(request):
         dep_name = dep.name if dep else ''
         pos_name = pos.name if pos else ''
 
-        if dep_name:
+        # ✅ Sanani formatlash (2025-03-04 -> 2025 yil 4-mart)
+        formatted_date = ''
+        if date_id:
+            dt = datetime.strptime(date_id, "%Y-%m-%d").date()
+            oy_nomi = oylar[dt.month - 1]
+            formatted_date = f"{dt.year} yil {dt.day}-{oy_nomi}"
+
+        full_name = ""
+        if pos_name != "":
+            full_name = pos_name
+        elif dep_name != "":
+            full_name = dep_name
+        elif org_name != "":
+            full_name = org_name
+
+        if full_name:
             template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma1.docx')
             if not os.path.exists(template_path):
                 return HttpResponse("Shablon fayl topilmadi!", status=404)
@@ -154,10 +182,13 @@ def document(request):
 
             # 🔁 O‘rniga qo‘yiladigan qiymatlar
             replacements = {
-                'DEPARTMENT': dep_name,
-                'ORGANIZATION': org_name,
-                'POSITION': pos_name,
-                'STIL': dep_name,
+                'DEPARTMENT': full_name,
+                'POST': post_id,
+                'FIO': fio_id,
+                'DATA': formatted_date,
+                'NAMBER': namber_id,
+                'RIM': rim_id,
+                'STYLE': full_name,
             }
 
             # 🔄 Oddiy matnni almashtirish + formatlash
@@ -168,11 +199,22 @@ def document(request):
                             run.text = run.text.replace(old, new)
 
                             # 🎨 Formatlash — faqat DEPARTMENTS uchun
-                            if old == 'STIL':
+                            if old == 'STYLE':
                                 run.font.bold = True
                                 run.font.size = Pt(12)
                                 run.font.name = 'Times New Roman'
-                                # run.font.color.rgb = RGBColor(0, 0, 128)  # to‘q ko‘k rang
+
+                            if old == 'FIO':
+                                run.font.bold = True
+                                run.font.name = 'Times New Roman'
+
+                            if old == 'DATA':
+                                run.font.bold = True
+                                run.font.name = 'Times New Roman'
+
+                            if old == 'NAMBER':
+                                run.font.bold = True
+                                run.font.name = 'Times New Roman'
 
             # 🔄 Text box (shape) ichidagi matnni almashtirish
             replace_text_in_textboxes(doc.element.body, replacements)
