@@ -11,11 +11,11 @@ import os
 from django.http import HttpResponse
 from django.conf import settings
 from docx.oxml.ns import qn
-from docx.shared import Pt, RGBColor
+from docx.shared import Pt, RGBColor,Inches
 from datetime import datetime
-from docx.shared import Pt
 from docx.oxml import OxmlElement
-from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.enum.table import WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT
+
 
 def technics(request, pk=None):
     # Category filter
@@ -274,19 +274,90 @@ def hisobot_get(request):
 
 
 def set_cell_border(cell, **kwargs):
-    """Word jadval hujayrasi atrofida ramka (chiziq) qo‘yish uchun"""
+    """Word jadval hujayrasi atrofida chiziq (border) chizish uchun."""
     tc = cell._tc
     tcPr = tc.get_or_add_tcPr()
     for edge in ('top', 'left', 'bottom', 'right'):
         edge_data = kwargs.get(edge)
         if edge_data:
-            tag = f"w:{edge}"
-            element = OxmlElement(tag)
+            element = OxmlElement(f"w:{edge}")
             for key in ['val', 'sz', 'space', 'color']:
                 val = edge_data.get(key)
                 if val:
                     element.set(qn(f"w:{key}"), str(val))
             tcPr.append(element)
+
+
+def set_cell_text(cell, text, bold=False, size_pt=11, center=False):
+    """Hujayraga matn yozish va font o‘rnatish."""
+    cell.text = text or ''
+    for p in cell.paragraphs:
+        if center:
+            p.alignment = 1  # markazlash
+        for run in p.runs:
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(size_pt)
+            run.font.bold = bold
+
+
+def create_table(doc, title, data, headers):
+    """Sarlavha va jadval yaratish (masofa va format bilan)."""
+    # 📌 Bo‘lim sarlavhasi
+    heading_para = doc.add_paragraph()
+    heading_para.alignment = 0  # chapda
+    run = heading_para.add_run(title)
+    run.bold = True
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(10)
+
+    # 🔹 Jadval yaratish
+    table = doc.add_table(rows=1, cols=len(headers))
+    try:
+        table.style = 'Table Grid'
+    except KeyError:
+        table.style = None
+
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = False
+
+    # Ustun kengliklari (inchlarda)
+    widths = [Inches(0.3), Inches(1.2), Inches(1.2), Inches(1.2)]
+
+    # Jadval sarlavhalari
+    hdr_cells = table.rows[0].cells
+    for i, h in enumerate(headers):
+        hdr_cells[i].width = widths[i]
+        set_cell_text(hdr_cells[i], h, bold=True, center=True)
+        set_cell_border(hdr_cells[i],
+                        top={"val": "single", "sz": "8", "color": "000000"},
+                        left={"val": "single", "sz": "8", "color": "000000"},
+                        bottom={"val": "single", "sz": "8", "color": "000000"},
+                        right={"val": "single", "sz": "8", "color": "000000"})
+
+    # 🔹 Ma’lumotlarni to‘ldirish
+    for idx, item in enumerate(data, start=1):
+        row = table.add_row()
+        row.height = Inches(0.25)
+        row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
+        cells = row.cells
+        values = [
+            f"{idx}.",  # raqam va nuqta
+            item.name or '',
+            item.serial or '',
+            getattr(item, 'moc', '') or '',
+        ]
+        for i, val in enumerate(values):
+            set_cell_text(cells[i], val, center=(i == 0))  # 1-ustun markazda
+            set_cell_border(cells[i],
+                            top={"val": "single", "sz": "6", "color": "000000"},
+                            left={"val": "single", "sz": "6", "color": "000000"},
+                            bottom={"val": "single", "sz": "6", "color": "000000"},
+                            right={"val": "single", "sz": "6", "color": "000000"})
+
+    # Jadvaldan keyin bo‘sh satr qo‘shish
+    doc.add_paragraph()
+
+    return heading_para, table
 
 
 def hisobot_post(request):
@@ -297,7 +368,6 @@ def hisobot_post(request):
     dep_id = request.POST.get('department')
     pos_id = request.POST.get('position')
 
-    # Xavfsiz olish (bo‘sh bo‘lsa None bo‘ladi)
     org = Organization.objects.filter(id=org_id).first() if org_id and org_id.isdigit() else None
     dep = Department.objects.filter(id=dep_id).first() if dep_id and dep_id.isdigit() else None
     pos = Position.objects.filter(id=pos_id).first() if pos_id and pos_id.isdigit() else None
@@ -313,7 +383,6 @@ def hisobot_post(request):
         'DEPARTMENT': dep.name if dep else '',
         'ORGANIZATION': org.name if org else '',
     }
-
     for p in doc.paragraphs:
         for old, new in replacements.items():
             if old in p.text:
@@ -322,81 +391,64 @@ def hisobot_post(request):
                     r.font.name = 'Times New Roman'
                     r.font.size = Pt(12)
 
-    # 🔹 2. TABLE markerini topish
-    table_placeholder = 'TABLE'
+    # 🔹 2. TABLE joyini topish
     target_paragraph = None
     for p in doc.paragraphs:
-        if table_placeholder in p.text:
+        if 'TABLE' in p.text:
             target_paragraph = p
             p.text = ''
             break
 
-    # 🔹 3. Texnikalar ro‘yxati
-    technics = Technics.objects.select_related('category', 'employee').all()
-    if pos:
-        technics = technics.filter(employee__organization=org)
-    if dep:
-        technics = technics.filter(employee__department=dep)
+    # 🔹 3. Texnikalarni ajratish
+    kompyuterlar = Technics.objects.select_related('employee').filter(category_id=1)
+    printerlar = Technics.objects.select_related('employee').filter(category_id=2)
     if org:
-        technics = technics.filter(employee__position=pos)
+        kompyuterlar = kompyuterlar.filter(employee__organization=org)
+        printerlar = printerlar.filter(employee__organization=org)
+    if dep:
+        kompyuterlar = kompyuterlar.filter(employee__department=dep)
+        printerlar = printerlar.filter(employee__department=dep)
+    if pos:
+        kompyuterlar = kompyuterlar.filter(employee__position=pos)
+        printerlar = printerlar.filter(employee__position=pos)
 
-    # 🔹 4. Jadval sarlavhasi yozuvi
-    heading_para = doc.add_paragraph()
-    heading_para.alignment = 0  # chapda
-    run = heading_para.add_run("Kompyuterlar (shaxsiy kompyuter, monoblok, noutbuk, planshet va infokioskalar)")
-    run.bold = True
-    run.font.name = 'Times New Roman'
-    run.font.size = Pt(10)
-
-    # 🔹 5. Jadval yaratish
-    table = doc.add_table(rows=1, cols=4)
-    try:
-        table.style = 'Table Grid'
-    except KeyError:
-        table.style = None
-
+    # 🔹 4. Jadval sarlavhalari
     headers = ['№', 'Rusumi', 'Kompyuter SR:', 'Monitor SR:']
-    hdr_cells = table.rows[0].cells
-    for i, h in enumerate(headers):
-        hdr_cells[i].text = h
-        for run in hdr_cells[i].paragraphs[0].runs:
-            run.font.bold = True
-            run.font.name = 'Times New Roman'
-            run.font.size = Pt(12)
-        set_cell_border(hdr_cells[i],
-                        top={"val": "single", "sz": "6", "color": "000000"},
-                        left={"val": "single", "sz": "6", "color": "000000"},
-                        bottom={"val": "single", "sz": "6", "color": "000000"},
-                        right={"val": "single", "sz": "6", "color": "000000"})
 
-    # 🔹 6. Texnikalar ma’lumotlari
-    for idx, tech in enumerate(technics, start=1):
-        row_cells = table.add_row().cells
-        row_cells[0].text = str(idx)
-        row_cells[1].text = tech.name or ''
-        row_cells[2].text = tech.serial or ''
-        row_cells[3].text = getattr(tech, 'moc', '')  # mavjud bo‘lmasa, bo‘sh chiqadi
-        for cell in row_cells:
-            for run in cell.paragraphs[0].runs:
-                run.font.name = 'Times New Roman'
-                run.font.size = Pt(12)
-            set_cell_border(cell,
-                            top={"val": "single", "sz": "6", "color": "000000"},
-                            left={"val": "single", "sz": "6", "color": "000000"},
-                            bottom={"val": "single", "sz": "6", "color": "000000"},
-                            right={"val": "single", "sz": "6", "color": "000000"})
+    heading1, table1 = create_table(
+        doc,
+        "Kompyuterlar (shaxsiy kompyuter, monoblok, noutbuk, planshet va infokioskalar)",
+        kompyuterlar,
+        headers
+    )
+    heading2, table2 = create_table(
+        doc,
+        "Printerlar (lazer, MFU, siyohli va boshqa printerlar)",
+        printerlar,
+        headers
+    )
 
-    # 🔹 7. Jadvalni TABLE joyiga ko‘chirish
+    # 🔹 5. TABLE joyiga qo‘yish
     if target_paragraph is not None:
-        target_paragraph._p.addnext(heading_para._p)
-        heading_para._p.addnext(table._tbl)
+        target_paragraph._p.addnext(heading1._p)
+        heading1._p.addnext(table1._tbl)
+        table1._tbl.addnext(heading2._p)
+        heading2._p.addnext(table2._tbl)
+    else:
+        doc.add_paragraph()
+        doc._body._body.append(heading1._p)
+        doc._body._body.append(table1._tbl)
+        doc._body._body.append(heading2._p)
+        doc._body._body.append(table2._tbl)
 
-    # 🔹 8. Hujjatni jo‘natish
+    # 🔹 6. Hujjatni jo‘natish
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
     response['Content-Disposition'] = 'attachment; filename="hisobot_yangi.docx"'
     doc.save(response)
     return response
+
+
 
 
