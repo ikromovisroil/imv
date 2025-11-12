@@ -13,7 +13,7 @@
  <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>Dalolatnoma</h1>
+      <h1>Hisobot</h1>
     </div><!-- End Page Title -->
 
     <section class="section">
@@ -25,7 +25,7 @@
               <h5 class="card-title">Vertical Form</h5>
 
               <!-- Vertical Form -->
-              <form class="row g-3" action="{% url 'document_post' %}" method="post">{% csrf_token %}
+              <form class="row g-3" action="{% url 'hisobot_post' %}" method="post">{% csrf_token %}
                 <div class="col-12">
                   <label for="organization" class="form-label">Tashkilot :</label>
                     <select id="organization" name="organization" class="form-select">
@@ -51,32 +51,6 @@
                         {% for pos in positions %}
                             <option value="{{ pos.id }}" {% if selected_pos == pos.id|stringformat:"s" %}selected{% endif %}>{{ pos.name }}</option>
                         {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-12">
-                  <label for="post_id" class="form-label">Lavozim :</label>
-                  <input type="text" name="post_id" id="post_id" class="form-control" required=""  placeholder="direktori">
-                </div>
-                <div class="col-md-12">
-                  <label for="fio_id" class="form-label">F.I.O :</label>
-                  <input type="text" name="fio_id" id="fio_id" class="form-control" required=""  placeholder="Sh.Muxamedov">
-                </div>
-                <div class="col-md-12">
-                  <label for="date_id" class="col-sm-2 col-form-label">Date</label>
-                  <input type="date" name="date_id" id="date_id" required="" class="form-control">
-                </div>
-                <div class="col-md-12">
-                  <label for="namber_id" class="form-label">Shartnoma raqami :</label>
-                  <input type="text" name="namber_id" class="form-control" required="" id="namber_id" placeholder="1">
-                </div>
-                <div class="col-md-12">
-                    <label for="rim_id" class="form-label">Chorak:</label>
-                    <select id="rim_id" name="rim_id" class="form-select">
-                      <option value="">Tanlang...</option>
-                      <option value="I">I</option>
-                      <option value="II">II</option>
-                      <option value="III">III</option>
-                      <option value="IV">IV</option>
                     </select>
                 </div>
                 <div class="text-center">

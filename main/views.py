@@ -7,15 +7,15 @@ from django.http import JsonResponse
 from django.db.models import Q
 from django.db.models import Count, Prefetch
 from docx import Document
-from django.conf import settings
 import os
 from django.http import HttpResponse
 from django.conf import settings
 from docx.oxml.ns import qn
-from docx.shared import Pt
 from docx.shared import Pt, RGBColor
-from datetime import datetime, date
-
+from datetime import datetime
+from docx.shared import Pt
+from docx.oxml import OxmlElement
+from docx.enum.table import WD_TABLE_ALIGNMENT
 
 def technics(request, pk=None):
     # Category filter
@@ -65,7 +65,6 @@ def technics(request, pk=None):
     }
 
     return render(request, 'main/technics.html', context)
-
 
 
 def ajax_load_departments(request):
@@ -133,104 +132,34 @@ def replace_text_in_textboxes(element, replacements):
                         child.text = text.replace(old, new)
 
 
-def document(request):
-    oylar = [
-        "yanvarda", "fevralda", "martda", "aprelda", "mayda", "iyunda",
-        "iyulda", "avgustda", "sentabrda", "oktabrda", "noyabrda", "dekabrda"
-    ]
+def get_technics_count(request):
+    org_id = request.GET.get('org_id')
+    dep_id = request.GET.get('dep_id')
+    pos_id = request.GET.get('pos_id')
 
-    if request.method == 'POST':
-        org_id = request.POST.get('organization')
-        dep_id = request.POST.get('department')
-        pos_id = request.POST.get('position')
-        post_id = request.POST.get('post_id')
-        fio_id = request.POST.get('fio_id')
-        date_id = request.POST.get('date_id')
-        namber_id = request.POST.get('namber_id')
-        rim_id = request.POST.get('rim_id')
+    # Default: barcha texnikalar
+    tec = Technics.objects.all()
 
-        # Modeldan tanlangan obyektlarni olish
-        org = Organization.objects.filter(id=org_id).first() if org_id else None
-        dep = Department.objects.filter(id=dep_id).first() if dep_id else None
-        pos = Position.objects.filter(id=pos_id).first() if pos_id else None
+    if org_id:
+        tec = tec.filter(
+            Q(employee__organization_id=org_id) |
+            Q(employee__department__organization_id=org_id) |
+            Q(employee__position__department__organization_id=org_id)
+        )
+    if dep_id:
+        tec = tec.filter(
+            Q(employee__department_id=dep_id) |
+            Q(employee__position__department_id=dep_id)
+        )
+    if pos_id:
+        tec = tec.filter(employee__position_id=pos_id)
 
-        org_name = org.name if org else ''
-        dep_name = dep.name if dep else ''
-        pos_name = pos.name if pos else ''
+    count = tec.count()
+    return JsonResponse({'count': count})
 
-        # ✅ Sanani formatlash (2025-03-04 -> 2025 yil 4-mart)
-        formatted_date = ''
-        if date_id:
-            dt = datetime.strptime(date_id, "%Y-%m-%d").date()
-            oy_nomi = oylar[dt.month - 1]
-            formatted_date = f"{dt.year} yil {dt.day}-{oy_nomi}"
 
-        full_name = ""
-        if pos_name != "":
-            full_name = pos_name
-        elif dep_name != "":
-            full_name = dep_name
-        elif org_name != "":
-            full_name = org_name
-
-        if full_name:
-            template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma1.docx')
-            if not os.path.exists(template_path):
-                return HttpResponse("Shablon fayl topilmadi!", status=404)
-
-            doc = Document(template_path)
-
-            # 🔁 O‘rniga qo‘yiladigan qiymatlar
-            replacements = {
-                'DEPARTMENT': full_name,
-                'POST': post_id,
-                'FIO': fio_id,
-                'DATA': formatted_date,
-                'NAMBER': namber_id,
-                'RIM': rim_id,
-                'STYLE': full_name,
-            }
-
-            # 🔄 Oddiy matnni almashtirish + formatlash
-            for paragraph in doc.paragraphs:
-                for run in paragraph.runs:
-                    for old, new in replacements.items():
-                        if old in run.text:
-                            run.text = run.text.replace(old, new)
-
-                            # 🎨 Formatlash — faqat DEPARTMENTS uchun
-                            if old == 'STYLE':
-                                run.font.bold = True
-                                run.font.size = Pt(12)
-                                run.font.name = 'Times New Roman'
-
-                            if old == 'FIO':
-                                run.font.bold = True
-                                run.font.name = 'Times New Roman'
-
-                            if old == 'DATA':
-                                run.font.bold = True
-                                run.font.name = 'Times New Roman'
-
-                            if old == 'NAMBER':
-                                run.font.bold = True
-                                run.font.name = 'Times New Roman'
-
-            # 🔄 Text box (shape) ichidagi matnni almashtirish
-            replace_text_in_textboxes(doc.element.body, replacements)
-
-            # 📄 Yaratilgan faylni qaytarish
-            response = HttpResponse(
-                content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-            )
-            response['Content-Disposition'] = 'attachment; filename="dalolatnoma_yangi.docx"'
-            doc.save(response)
-            return response
-
-        # Agar department tanlanmagan bo‘lsa
-        return redirect(request.META.get('HTTP_REFERER', '/'))
-
-    # GET so‘rovi uchun context
+def document_get(request):
+    """GET so‘rovi uchun sahifani ko‘rsatish"""
     context = {
         'departments': Department.objects.filter(is_active=True),
         'positions': Position.objects.filter(is_active=True),
@@ -238,5 +167,236 @@ def document(request):
         'organizations': Organization.objects.filter(is_active=True),
     }
     return render(request, 'main/document.html', context)
+
+
+def document_post(request):
+    """POST so‘rovi uchun dalolatnoma yaratish"""
+    oylar = [
+        "yanvarda", "fevralda", "martda", "aprelda", "mayda", "iyunda",
+        "iyulda", "avgustda", "sentabrda", "oktabrda", "noyabrda", "dekabrda"
+    ]
+
+    if request.method != 'POST':
+        return redirect('document_get')
+
+    org_id = request.POST.get('organization')
+    dep_id = request.POST.get('department')
+    pos_id = request.POST.get('position')
+    post_id = request.POST.get('post_id')
+    fio_id = request.POST.get('fio_id')
+    date_id = request.POST.get('date_id')
+    namber_id = request.POST.get('namber_id')
+    rim_id = request.POST.get('rim_id')
+
+    # 🔍 Model obyektlarini xavfsiz olish
+    org = Organization.objects.filter(id=org_id).first() if org_id else None
+    dep = Department.objects.filter(id=dep_id).first() if dep_id else None
+    pos = Position.objects.filter(id=pos_id).first() if pos_id else None
+
+    # 📅 Sanani formatlash
+    formatted_date = ''
+    if date_id:
+        try:
+            dt = datetime.strptime(date_id.strip(), "%Y-%m-%d").date()
+            oy_nomi = oylar[dt.month - 1]
+            formatted_date = f"{dt.year} yil {dt.day}-{oy_nomi}"
+        except (ValueError, TypeError):
+            formatted_date = str(date_id)
+
+    # ✅ Qaysi obyekt tanlanganini aniqlash
+
+    full_name = None
+    technic_count = 0
+    if org:
+        full_name = org
+        technic_count = Technics.objects.filter(employee__organization=org).count()
+    elif dep:
+        full_name = dep
+        technic_count = Technics.objects.filter(employee__department=dep).count()
+    elif pos:
+        full_name = pos
+        technic_count = Technics.objects.filter(employee__position=pos).count()
+    else:
+        return HttpResponse("Tashkilot, bo‘lim yoki lavozim tanlanmagan!", status=400)
+
+    print(full_name.name,technic_count)
+
+    # 📂 Shablonni tekshirish
+    template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma1.docx')
+    if not os.path.exists(template_path):
+        return HttpResponse("Shablon fayl topilmadi!", status=404)
+
+    doc = Document(template_path)
+
+    # 🔁 O‘rniga qo‘yiladigan qiymatlar
+    replacements = {
+        'DEPARTMENT': full_name.name,
+        'POST': post_id or '',
+        'FIO': fio_id or '',
+        'DATA': formatted_date or '',
+        'NAMBER': namber_id or '',
+        'RIM': rim_id or '',
+        'STYLE': full_name.name or '',
+    }
+
+    # ✍️ Oddiy matnni almashtirish
+    for paragraph in doc.paragraphs:
+        for run in paragraph.runs:
+            for old, new in replacements.items():
+                if old in run.text:
+                    run.text = run.text.replace(old, new)
+                    run.font.name = 'Times New Roman'
+                    run.font.size = Pt(12)
+                    if old in ['STYLE', 'FIO', 'DATA', 'NAMBER']:
+                        run.font.bold = True
+
+    # 🔄 Text box (shape) ichidagi matnni almashtirish
+    replace_text_in_textboxes(doc.element.body, replacements)
+
+    # 📄 Faylni qaytarish
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+    response['Content-Disposition'] = 'attachment; filename="dalolatnoma_yangi.docx"'
+    doc.save(response)
+    return response
+
+
+def hisobot_get(request):
+    """GET so‘rovi uchun sahifani ko‘rsatish"""
+    context = {
+        'departments': Department.objects.filter(is_active=True),
+        'positions': Position.objects.filter(is_active=True),
+        'categorys': Category.objects.filter(is_active=True),
+        'organizations': Organization.objects.filter(is_active=True),
+    }
+    return render(request, 'main/hisobot.html', context)
+
+
+def set_cell_border(cell, **kwargs):
+    """Word jadval hujayrasi atrofida ramka (chiziq) qo‘yish uchun"""
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    for edge in ('top', 'left', 'bottom', 'right'):
+        edge_data = kwargs.get(edge)
+        if edge_data:
+            tag = f"w:{edge}"
+            element = OxmlElement(tag)
+            for key in ['val', 'sz', 'space', 'color']:
+                val = edge_data.get(key)
+                if val:
+                    element.set(qn(f"w:{key}"), str(val))
+            tcPr.append(element)
+
+
+def hisobot_post(request):
+    if request.method != 'POST':
+        return redirect('hisobot_get')
+
+    org_id = request.POST.get('organization')
+    dep_id = request.POST.get('department')
+    pos_id = request.POST.get('position')
+
+    # Xavfsiz olish (bo‘sh bo‘lsa None bo‘ladi)
+    org = Organization.objects.filter(id=org_id).first() if org_id and org_id.isdigit() else None
+    dep = Department.objects.filter(id=dep_id).first() if dep_id and dep_id.isdigit() else None
+    pos = Position.objects.filter(id=pos_id).first() if pos_id and pos_id.isdigit() else None
+
+    template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma2.docx')
+    if not os.path.exists(template_path):
+        return HttpResponse("Shablon fayl topilmadi!", status=404)
+
+    doc = Document(template_path)
+
+    # 🔹 1. Matnli markerlarni almashtirish
+    replacements = {
+        'DEPARTMENT': dep.name if dep else '',
+        'ORGANIZATION': org.name if org else '',
+    }
+
+    for p in doc.paragraphs:
+        for old, new in replacements.items():
+            if old in p.text:
+                p.text = p.text.replace(old, new)
+                for r in p.runs:
+                    r.font.name = 'Times New Roman'
+                    r.font.size = Pt(12)
+
+    # 🔹 2. TABLE markerini topish
+    table_placeholder = 'TABLE'
+    target_paragraph = None
+    for p in doc.paragraphs:
+        if table_placeholder in p.text:
+            target_paragraph = p
+            p.text = ''
+            break
+
+    # 🔹 3. Texnikalar ro‘yxati
+    technics = Technics.objects.select_related('category', 'employee').all()
+    if pos:
+        technics = technics.filter(employee__organization=org)
+    if dep:
+        technics = technics.filter(employee__department=dep)
+    if org:
+        technics = technics.filter(employee__position=pos)
+
+    # 🔹 4. Jadval sarlavhasi yozuvi
+    heading_para = doc.add_paragraph()
+    heading_para.alignment = 0  # chapda
+    run = heading_para.add_run("Kompyuterlar (shaxsiy kompyuter, monoblok, noutbuk, planshet va infokioskalar)")
+    run.bold = True
+    run.font.name = 'Times New Roman'
+    run.font.size = Pt(10)
+
+    # 🔹 5. Jadval yaratish
+    table = doc.add_table(rows=1, cols=4)
+    try:
+        table.style = 'Table Grid'
+    except KeyError:
+        table.style = None
+
+    headers = ['№', 'Rusumi', 'Kompyuter SR:', 'Monitor SR:']
+    hdr_cells = table.rows[0].cells
+    for i, h in enumerate(headers):
+        hdr_cells[i].text = h
+        for run in hdr_cells[i].paragraphs[0].runs:
+            run.font.bold = True
+            run.font.name = 'Times New Roman'
+            run.font.size = Pt(12)
+        set_cell_border(hdr_cells[i],
+                        top={"val": "single", "sz": "6", "color": "000000"},
+                        left={"val": "single", "sz": "6", "color": "000000"},
+                        bottom={"val": "single", "sz": "6", "color": "000000"},
+                        right={"val": "single", "sz": "6", "color": "000000"})
+
+    # 🔹 6. Texnikalar ma’lumotlari
+    for idx, tech in enumerate(technics, start=1):
+        row_cells = table.add_row().cells
+        row_cells[0].text = str(idx)
+        row_cells[1].text = tech.name or ''
+        row_cells[2].text = tech.serial or ''
+        row_cells[3].text = getattr(tech, 'moc', '')  # mavjud bo‘lmasa, bo‘sh chiqadi
+        for cell in row_cells:
+            for run in cell.paragraphs[0].runs:
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(12)
+            set_cell_border(cell,
+                            top={"val": "single", "sz": "6", "color": "000000"},
+                            left={"val": "single", "sz": "6", "color": "000000"},
+                            bottom={"val": "single", "sz": "6", "color": "000000"},
+                            right={"val": "single", "sz": "6", "color": "000000"})
+
+    # 🔹 7. Jadvalni TABLE joyiga ko‘chirish
+    if target_paragraph is not None:
+        target_paragraph._p.addnext(heading_para._p)
+        heading_para._p.addnext(table._tbl)
+
+    # 🔹 8. Hujjatni jo‘natish
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
+    response['Content-Disposition'] = 'attachment; filename="hisobot_yangi.docx"'
+    doc.save(response)
+    return response
 
 

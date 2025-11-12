@@ -93,6 +93,16 @@ class Employee(models.Model):
     date_creat = models.DateField(auto_now_add=True)
     date_edit = models.DateField(auto_now=True)
 
+    def save(self, *args, **kwargs):
+        # Avtomatik pog‘ona ketma-ketligi
+        if self.position and self.position.department:
+            self.department = self.position.department
+
+        if self.department and self.department.organization:
+            self.organization = self.department.organization
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.full_name
 
