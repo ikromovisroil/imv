@@ -149,8 +149,7 @@ class Technics(models.Model):
     class Meta:
         db_table = 'technics'
 
-from django.db import models
-from django.contrib.auth.models import User
+
 
 class ActivityLog(models.Model):
     ACTION_TYPES = [

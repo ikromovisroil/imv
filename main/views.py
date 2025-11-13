@@ -15,6 +15,55 @@ from docx.shared import Pt, RGBColor,Inches
 from datetime import datetime
 from docx.oxml import OxmlElement
 from docx.enum.table import WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT
+from collections import defaultdict
+
+import json
+from django.core.serializers.json import DjangoJSONEncoder
+
+from .models import Organization, Category, Technics  # o'zingga moslashtir
+
+def index(request):
+    organizations = Organization.objects.all()
+    categorys = Category.objects.all()
+
+    chart_data = []
+
+    for cat in categorys:
+        row = {
+            "category": cat.name,   # x o‘qi uchun
+        }
+        for org in organizations:
+            count = Technics.objects.filter(
+                employee__organization=org,
+                category=cat,
+            ).count()
+            # JS uchun field: org_1, org_2 ...
+            row[f"org_{org.id}"] = count
+        chart_data.append(row)
+
+    pie_data = []
+
+    for org in organizations:
+        total = Technics.objects.filter(
+            employee__organization=org
+        ).count()
+
+        pie_data.append({
+            "name": org.name,
+            "count": total
+        })
+
+    context = {
+        "organizations": organizations,
+        "categorys": categorys,
+        "chart_data": json.dumps(chart_data, cls=DjangoJSONEncoder),
+        "pie_data": json.dumps(pie_data, cls=DjangoJSONEncoder),
+
+    }
+    return render(request, "main/index.html", context)
+
+
+
 
 
 def technics(request, pk=None):
@@ -26,44 +75,38 @@ def technics(request, pk=None):
         category = None
         technics_qs = Technics.objects.filter(is_active=True)
 
-    # Filter parameters
+    # Filters
     org_id = request.GET.get('organization')
     dep_id = request.GET.get('department')
     pos_id = request.GET.get('position')
 
-    # Dropdown data
-    organizations = Organization.objects.filter(is_active=True)
-    departments = Department.objects.filter(is_active=True)
-    positions = Position.objects.filter(is_active=True)
-
-    # --- Filtering logic ---
     if org_id:
-        technics_qs = technics_qs.filter(
-            Q(employee__organization_id=org_id) |
-            Q(employee__department__organization_id=org_id) |
-            Q(employee__position__department__organization_id=org_id)
-        )
+        technics_qs = technics_qs.filter(employee__organization_id=org_id)
     if dep_id:
-        technics_qs = technics_qs.filter(
-            Q(employee__department_id=dep_id) |
-            Q(employee__position__department_id=dep_id)
-        )
+        technics_qs = technics_qs.filter(employee__department_id=dep_id)
     if pos_id:
         technics_qs = technics_qs.filter(employee__position_id=pos_id)
 
-    # Context for template
+    # Umumiy son (sarlavha uchun)
+    total_count = technics_qs.count()
+
+    # Xodim bo‘yicha guruhlash (bitta satrda ko‘rsatish uchun)
+    grouped = defaultdict(list)
+    for t in technics_qs.select_related('employee', 'category').order_by('employee__full_name', 'category__name', 'name'):
+        grouped[t.employee].append(t)
+
     context = {
         'category': category,
         'categorys': Category.objects.filter(is_active=True),
-        'technics': technics_qs.select_related('employee', 'category'),
-        'organizations': organizations,
-        'departments': departments,
-        'positions': positions,
+        'grouped_technics': grouped.items(),   # <— template aynan shuni o‘qiydi
+        'total_count': total_count,            # <— sarlavhada ishlatamiz
+        'organizations': Organization.objects.filter(is_active=True),
+        'departments': Department.objects.filter(is_active=True),
+        'positions': Position.objects.filter(is_active=True),
         'selected_org': org_id,
         'selected_dep': dep_id,
         'selected_pos': pos_id,
     }
-
     return render(request, 'main/technics.html', context)
 
 
@@ -104,7 +147,7 @@ def organization(request, pk):
     # Boshqarma (Department) bo‘yicha texnika soni va bo‘limlarni ulash
     departments = Department.objects.filter(organization=organization) \
         .annotate(
-        technics_count=Count('position__employee__technics', distinct=True)+Count('employee__technics', distinct=True),
+        technics_count=Count('employee__technics', distinct=True),
     ) \
         .prefetch_related(
         Prefetch('position_set', queryset=positions_qs)
@@ -264,7 +307,9 @@ def document_post(request):
 
 def hisobot_get(request):
     """GET so‘rovi uchun sahifani ko‘rsatish"""
+    technics = Technics.objects.filter(is_active=True)
     context = {
+        'technics': technics,
         'departments': Department.objects.filter(is_active=True),
         'positions': Position.objects.filter(is_active=True),
         'categorys': Category.objects.filter(is_active=True),

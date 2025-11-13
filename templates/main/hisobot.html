@@ -70,7 +70,7 @@
                         "_____"_______________2025 yil
                     </div>
                     <div class="text-center"><b>Kompyuter va printer texnikalariga tizimli va texnik xizmat ko‘rsatishni amalga oshirish hisoboti</b></div>
-                    <div class="text-center text-decoration-underline"><b>Davlat budjeti siyosati departamenti </b></div>
+                    <div class="text-center text-decoration-underline"><b id="selekt_id_text">Davlat byudjeti siyosati departamenti</b></div>
                     <div class="text-center"  style="font-size: 8pt;"><b>(boshqarma nomi)</b></div>
                     <br>
                     <div class="text-center text-decoration-underline">
@@ -95,12 +95,16 @@
                               </tr>
                             </thead>
                             <tbody>
-                              <tr>
-                                <th scope="row">1</th>
-                                <td>Brandon Jacob</td>
-                                <td>Designer</td>
-                                <td>28</td>
-                              </tr>
+                                {% for i in technics %}
+                                  <tr>
+                                    <th scope="row">{{ forloop.counter }}</th>
+                                    <td>{{ i.name }}</td>
+                                    <td>{{ i.serial }}</td>
+                                    <td>{{ i.moc }}</td>
+                                  </tr>
+
+
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -229,38 +233,6 @@ $(document).ready(function(){
             loadPositions(initialDep, initialPos);
         }
     }
-});
-
-$(document).ready(function(){
-
-    function updateTechnicCount(){
-        const orgId = $('#organization').val();
-        const depId = $('#department').val();
-        const posId = $('#position').val();
-
-        $.ajax({
-            url: "{% url 'get_technics_count' %}",
-            data: {
-                'org_id': orgId,
-                'dep_id': depId,
-                'pos_id': posId
-            },
-            success: function(data){
-                $('#techCount').text(data.count + ' ta texnika');
-            },
-            error: function(err){
-                console.error("AJAX xato:", err);
-            }
-        });
-    }
-
-    // Har bir select change bo‘lganda
-    $('#organization, #department, #position').on('change', function(){
-        updateTechnicCount();
-    });
-
-    // Sahifa yuklanganda texnika sonini chiqarish
-    updateTechnicCount();
 });
 </script>
 

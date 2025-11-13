@@ -63,22 +63,21 @@
       </div>
     </section>
 
-    <section class="section">
+    <section class="section dashboard">
       <div class="row">
         <div class="col-lg-12">
 
-          <div class="card">
+          <div class="card recent-sales overflow-auto">
             <div class="card-body">
-              <h5 class="card-title">
-                {% if category %}
-                    {{ category.name }} — <span class="text-muted">{{ technics.count }} ta texnika</span>
-                {% else %}
-                    Hammasi — <span class="text-muted">{{ technics.count }} ta texnika</span>
-                {% endif %}
+            <h5 class="card-title">
+              {% if category %}
+                  {{ category.name }} — <span class="text-muted">{{ total_count }} ta texnika</span>
+              {% else %}
+                  Hammasi — <span class="text-muted">{{ total_count }} ta texnika</span>
+              {% endif %}
             </h5>
-
               <!-- Table with stripped rows -->
-              <table class="table datatable">
+              <table class="table borderless datatable">
                   <thead>
                     <tr>
                       <th>#</th>
@@ -93,24 +92,49 @@
                     </tr>
                   </thead>
                   <tbody>
-                    {% for te in technics %}
-                    <tr>
-                      <th scope="row">{{ forloop.counter }}</th>
-                      <td>{{ te.employee.rank|default:" " }}</td>
-                      <td>{{ te.employee.full_name|default:" " }}</td>
-                      <td>{{ te.category }} ({{ te.name }})|default:" "</td>
-                      <td>{{ te.inventory|default:" " }}</td>
-                      <td>{{ te.serial|default:" " }}</td>
-                      <td>{{ te.ip|default:" " }}</td>
-                      <td>{{ te.moc|default:" " }}</td>
-                      <td>{{ te.year|default:" " }}</td>
-                    </tr>
+                    {% for emp, techs in grouped_technics %}
+                      <tr>
+                        <th scope="row">{{ forloop.counter }}</th>
+                        <td>{{ emp.rank|default:"" }}</td>
+                        <td>{{ emp.full_name|default:"" }}</td>
+                        <td>
+                          {% for t in techs %}
+                            {{ t.category|default:"" }} ({{ t.name|default:"" }}){% if not forloop.last %}<br> <hr>{% endif %}
+                          {% endfor %}
+                        </td>
+                        <td>
+                          {% for t in techs %}
+                            {{ t.inventory|default:"" }}{% if not forloop.last %}<br><hr>{% endif %}
+                          {% endfor %}
+                        </td>
+                        <td>
+                          {% for t in techs %}
+                            {{ t.serial|default:"" }}{% if not forloop.last %}<br><hr>{% endif %}
+                          {% endfor %}
+                        </td>
+                        <td>
+                          {% for t in techs %}
+                            {{ t.ip|default:"" }}{% if not forloop.last %}<br><hr>{% endif %}
+                          {% endfor %}
+                        </td>
+                        <td>
+                          {% for t in techs %}
+                            {{ t.moc|default:"" }}{% if not forloop.last %}<br><hr>{% endif %}
+                          {% endfor %}
+                        </td>
+                        <td>
+                          {% for t in techs %}
+                            {{ t.year|default:"" }}{% if not forloop.last %}<br><hr>{% endif %}
+                          {% endfor %}
+                        </td>
+                      </tr>
                     {% empty %}
-                    <tr>
-                      <td colspan="7" class="text-center text-muted">Hech qanday texnika topilmadi.</td>
-                    </tr>
+                      <tr>
+                        <td colspan="9" class="text-center text-muted">Hech qanday texnika topilmadi.</td>
+                      </tr>
                     {% endfor %}
-                  </tbody>
+                    </tbody>
+
                 </table>
 
             </div>
