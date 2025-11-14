@@ -28,7 +28,7 @@
               <form class="row g-3" action="{% url 'document_post' %}" method="post">{% csrf_token %}
                 <div class="col-12">
                   <label for="organization" class="form-label">Tashkilot :</label>
-                    <select id="organization" name="organization" class="form-select">
+                    <select id="organization" name="organization" class="form-select" required>
                         <option value="">Tanlang...</option>
                         {% for org in organizations %}
                             <option value="{{ org.id }}" {% if selected_org == org.id|stringformat:"s" %}selected{% endif %}>{{ org.name }}</option>
@@ -55,23 +55,23 @@
                 </div>
                 <div class="col-md-12">
                   <label for="post_id" class="form-label">Lavozim :</label>
-                  <input type="text" name="post_id" id="post_id" class="form-control" required=""  placeholder="direktori">
+                  <input type="text" name="post_id" id="post_id" class="form-control" required  placeholder="direktori">
                 </div>
                 <div class="col-md-12">
                   <label for="fio_id" class="form-label">F.I.O :</label>
-                  <input type="text" name="fio_id" id="fio_id" class="form-control" required=""  placeholder="Sh.Muxamedov">
+                  <input type="text" name="fio_id" id="fio_id" class="form-control" required  placeholder="Sh.Muxamedov">
                 </div>
                 <div class="col-md-12">
                   <label for="date_id" class="col-sm-2 col-form-label">Date</label>
-                  <input type="date" name="date_id" id="date_id" required="" class="form-control">
+                  <input type="date" name="date_id" id="date_id" required class="form-control">
                 </div>
                 <div class="col-md-12">
                   <label for="namber_id" class="form-label">Shartnoma raqami :</label>
-                  <input type="text" name="namber_id" class="form-control" required="" id="namber_id" placeholder="1">
+                  <input type="text" name="namber_id" class="form-control" required id="namber_id" placeholder="1">
                 </div>
                 <div class="col-md-12">
                     <label for="rim_id" class="form-label">Chorak:</label>
-                    <select id="rim_id" name="rim_id" class="form-select">
+                    <select id="rim_id" name="rim_id" class="form-select" required>
                       <option value="">Tanlang...</option>
                       <option value="I">I</option>
                       <option value="II">II</option>

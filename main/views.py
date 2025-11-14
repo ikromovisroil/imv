@@ -269,16 +269,16 @@ def document_post(request):
     if org:
         full_name = org
         technic_count = Technics.objects.filter(employee__organization=org).count()
-    elif dep:
+    if dep:
         full_name = dep
         technic_count = Technics.objects.filter(employee__department=dep).count()
-    elif pos:
+    if pos:
         full_name = pos
         technic_count = Technics.objects.filter(employee__position=pos).count()
-    else:
-        return HttpResponse("Tashkilot, bo‘lim yoki lavozim tanlanmagan!", status=400)
 
-    print(full_name.name,technic_count)
+    if not full_name:
+        return HttpResponse("Tashkilot / bo‘lim / lavozim tanlanmagan!", status=400)
+
 
     # 📂 Shablonni tekshirish
     template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma1.docx')
@@ -296,6 +296,7 @@ def document_post(request):
         'NAMBER': namber_id or '',
         'RIM': rim_id or '',
         'STYLE': full_name.name or '',
+        'KOMPCOUNT': str(technic_count) or '',
     }
 
     # ✍️ Oddiy matnni almashtirish
@@ -306,7 +307,7 @@ def document_post(request):
                     run.text = run.text.replace(old, new)
                     run.font.name = 'Times New Roman'
                     run.font.size = Pt(12)
-                    if old in ['STYLE', 'FIO', 'DATA', 'NAMBER']:
+                    if old in ['STYLE', 'FIO', 'DATA', 'NAMBER', 'KOMPCOUNT']:
                         run.font.bold = True
 
     # 🔄 Text box (shape) ichidagi matnni almashtirish
