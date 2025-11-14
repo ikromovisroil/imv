@@ -16,11 +16,16 @@ from datetime import datetime
 from docx.oxml import OxmlElement
 from docx.enum.table import WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT
 from collections import defaultdict
-
 import json
 from django.core.serializers.json import DjangoJSONEncoder
 
-from .models import Organization, Category, Technics  # o'zingga moslashtir
+
+def global_data(request):
+    return {
+        "global_organizations": Organization.objects.all(),
+        "global_categorys": Category.objects.all(),
+    }
+
 
 def index(request):
     organizations = Organization.objects.all()
@@ -52,8 +57,12 @@ def index(request):
             "name": org.name,
             "count": total
         })
+    organizations1 = Organization.objects.all().annotate(
+        technics_count=Count('employee__technics', distinct=True)
+    )
 
     context = {
+        "organizations1":organizations1,
         "organizations": organizations,
         "categorys": categorys,
         "chart_data": json.dumps(chart_data, cls=DjangoJSONEncoder),
@@ -61,9 +70,6 @@ def index(request):
 
     }
     return render(request, "main/index.html", context)
-
-
-
 
 
 def technics(request, pk=None):
@@ -97,7 +103,6 @@ def technics(request, pk=None):
 
     context = {
         'category': category,
-        'categorys': Category.objects.filter(is_active=True),
         'grouped_technics': grouped.items(),   # <— template aynan shuni o‘qiydi
         'total_count': total_count,            # <— sarlavhada ishlatamiz
         'organizations': Organization.objects.filter(is_active=True),
@@ -135,29 +140,40 @@ def ajax_load_positions(request):
 
 
 def organization(request, pk):
-    organization = get_object_or_404(Organization, pk=pk)
-
-    # Bo‘limlar (Position) uchun texnika sonini hisoblash
-    positions_qs = Position.objects.annotate(
-        technics_count=Count('employee__technics')
-    ).prefetch_related(
-        'employee_set__technics_set'
+    organization = (
+        Organization.objects
+        .annotate(
+            technics_count=Count('employee__technics', distinct=True)
+        )
+        .prefetch_related(
+            'employee_set__technics_set'
+        )
+        .get(pk=pk)
     )
 
-    # Boshqarma (Department) bo‘yicha texnika soni va bo‘limlarni ulash
-    departments = Department.objects.filter(organization=organization) \
+    positions_qs = (
+        Position.objects
         .annotate(
-        technics_count=Count('employee__technics', distinct=True),
-    ) \
+            technics_count=Count('employee__technics', distinct=True)
+        )
+        .prefetch_related('employee_set__technics_set')
+    )
+
+    departments = (
+        Department.objects
+        .filter(organization=organization)
+        .annotate(
+            technics_count=Count('employee__technics', distinct=True),
+        )
         .prefetch_related(
-        Prefetch('position_set', queryset=positions_qs)
+            Prefetch('position_set', queryset=positions_qs),
+            'employee_set__technics_set',
+        )
     )
 
     context = {
         'organization': organization,
         'departments': departments,
-        'categorys': Category.objects.all(),
-        'organizations': Organization.objects.all(),
     }
     return render(request, 'main/organization.html', context)
 
