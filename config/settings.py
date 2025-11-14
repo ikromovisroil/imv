@@ -75,7 +75,7 @@ DATABASES = {
         'NAME': 'ivs_servis',
         'USER': 'ivs_user',
         'PASSWORD': 'Ivs123!',
-        'HOST': '192.168.120.142',
+        'HOST': 'localhost',
         'PORT': '5432',
     }
 }
