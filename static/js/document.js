@@ -79,4 +79,3 @@ $('#organization, #department, #position').change(function(){
 
 // Sahifa yuklanganda oldindan tanlangan qiymat bo‘lsa
 updateSelektText();
-

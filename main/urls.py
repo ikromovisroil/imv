@@ -13,5 +13,7 @@ urlpatterns = [
     path('technics_count/', get_technics_count, name='get_technics_count'),
     path('hisobot/', hisobot_get, name='hisobot_get'),
     path('hisobot/hisobot_post/', hisobot_post, name='hisobot_post'),
+    path('hisobot/ajax/technics/', ajax_load_technics, name='ajax_load_technics'),
+
 
 ]

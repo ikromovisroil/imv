@@ -18,13 +18,15 @@ from docx.enum.table import WD_ROW_HEIGHT_RULE, WD_TABLE_ALIGNMENT
 from collections import defaultdict
 import json
 from django.core.serializers.json import DjangoJSONEncoder
-
+from django.contrib.admin.models import LogEntry
+from django.contrib.contenttypes.models import ContentType
 
 def global_data(request):
     return {
         "global_organizations": Organization.objects.all(),
         "global_categorys": Category.objects.all(),
     }
+
 
 
 def index(request):
@@ -60,9 +62,11 @@ def index(request):
     organizations1 = Organization.objects.all().annotate(
         technics_count=Count('employee__technics', distinct=True)
     )
+    logs = LogEntry.objects.select_related('user', 'content_type').order_by('-action_time')[:10]
 
     context = {
-        "organizations1":organizations1,
+        "logs": logs,
+        "organizations1": organizations1,
         "organizations": organizations,
         "categorys": categorys,
         "chart_data": json.dumps(chart_data, cls=DjangoJSONEncoder),
@@ -322,6 +326,34 @@ def document_post(request):
     return response
 
 
+def ajax_load_technics(request):
+    org_id = request.GET.get('organization')
+    dep_id = request.GET.get('department')
+    pos_id = request.GET.get('position')
+
+    technics_qs = Technics.objects.filter(is_active=True)
+
+    if org_id:
+        technics_qs = technics_qs.filter(employee__organization_id=org_id)
+
+    if dep_id:
+        technics_qs = technics_qs.filter(employee__department_id=dep_id)
+
+    if pos_id:
+        technics_qs = technics_qs.filter(employee__position_id=pos_id)
+
+    data = []
+    for idx, t in enumerate(technics_qs, start=1):
+        data.append({
+            "num": idx,
+            "name": t.name or "",
+            "serial": t.serial or "",
+            "moc": t.moc or "",
+        })
+
+    return JsonResponse(data, safe=False)
+
+
 def hisobot_get(request):
     """GET so‘rovi uchun sahifani ko‘rsatish"""
     technics = Technics.objects.filter(is_active=True)
@@ -434,6 +466,24 @@ def hisobot_post(request):
     dep = Department.objects.filter(id=dep_id).first() if dep_id and dep_id.isdigit() else None
     pos = Position.objects.filter(id=pos_id).first() if pos_id and pos_id.isdigit() else None
 
+    # 🔹 3. Texnikalarni ajratish
+    kompyuterlar = Technics.objects.select_related('employee').filter(category_id__in=[1, 2, 3, 4])
+    printerlar = Technics.objects.select_related('employee').filter(category_id=2)
+    full_name = None
+
+    if org:
+        kompyuterlar = kompyuterlar.filter(employee__organization=org)
+        printerlar = printerlar.filter(employee__organization=org)
+        full_name = org
+    if dep:
+        kompyuterlar = kompyuterlar.filter(employee__department=dep)
+        printerlar = printerlar.filter(employee__department=dep)
+        full_name = dep
+    if pos:
+        kompyuterlar = kompyuterlar.filter(employee__position=pos)
+        printerlar = printerlar.filter(employee__position=pos)
+        full_name = pos
+
     template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma2.docx')
     if not os.path.exists(template_path):
         return HttpResponse("Shablon fayl topilmadi!", status=404)
@@ -442,8 +492,7 @@ def hisobot_post(request):
 
     # 🔹 1. Matnli markerlarni almashtirish
     replacements = {
-        'DEPARTMENT': dep.name if dep else '',
-        'ORGANIZATION': org.name if org else '',
+        'NAME': full_name.name if dep else '',
     }
     for p in doc.paragraphs:
         for old, new in replacements.items():
@@ -452,6 +501,9 @@ def hisobot_post(request):
                 for r in p.runs:
                     r.font.name = 'Times New Roman'
                     r.font.size = Pt(12)
+                    if old == 'NAME':
+                        r.font.bold = True
+                        r.font.underline = True
 
     # 🔹 2. TABLE joyini topish
     target_paragraph = None
@@ -461,18 +513,6 @@ def hisobot_post(request):
             p.text = ''
             break
 
-    # 🔹 3. Texnikalarni ajratish
-    kompyuterlar = Technics.objects.select_related('employee').filter(category_id=1)
-    printerlar = Technics.objects.select_related('employee').filter(category_id=2)
-    if org:
-        kompyuterlar = kompyuterlar.filter(employee__organization=org)
-        printerlar = printerlar.filter(employee__organization=org)
-    if dep:
-        kompyuterlar = kompyuterlar.filter(employee__department=dep)
-        printerlar = printerlar.filter(employee__department=dep)
-    if pos:
-        kompyuterlar = kompyuterlar.filter(employee__position=pos)
-        printerlar = printerlar.filter(employee__position=pos)
 
     # 🔹 4. Jadval sarlavhalari
     headers = ['№', 'Rusumi', 'Kompyuter SR:', 'Monitor SR:']

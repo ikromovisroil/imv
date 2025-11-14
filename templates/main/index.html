@@ -9,6 +9,36 @@
     <link
       rel="stylesheet"
       href="/charts/vanilla/pie-series/examples/simple-pie/ag-example-styles.css"/>
+<style>
+.log-row {
+    display: flex;
+    align-items: stretch;
+    margin-bottom: 25px;
+}
+
+.log-line {
+    width: 40px;
+    border-radius: 6px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding-top: 10px;
+}
+
+.log-icon {
+    font-size: 18px;
+    color: white;
+}
+
+.log-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    margin-left: 20px;
+    flex: 1;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+</style>
 {% endblock css %}
 
 {% block content %}
@@ -38,7 +68,7 @@
                       <i class="bi bi-people"></i>
                     </div>
                     <div class="ps-3">
-                      <h6>{{i.technics_count}} - ta texnika</h6>
+                      <h6>{{i.technics_count }} ta texnika</h6>
                     </div>
                   </div>
 
@@ -68,41 +98,39 @@
                 <h5 class="card-title">Oxirgi harakatlar</h5>
 
                 <div class="activity">
-                  {% for i in activityLog %}
+                    {% for i in logs %}
                     <div class="activity-item d-flex">
-                      <div class="activite-label">
-                        {{ i.timestamp|timesince }} oldin
-                      </div>
+                        <!-- TIME AGO -->
+                        <div class="activite-label">
+                            {{ i.action_time|timesince }} oldin
+                        </div>
 
-                      {# Log turi bo‘yicha rang tanlash (create/update/delete) #}
-                      {% if i.action == 'create' %}
-                        <i class="bi bi-circle-fill activity-badge text-success align-self-start"></i>
-                      {% elif i.action == 'update' %}
-                        <i class="bi bi-circle-fill activity-badge text-primary align-self-start"></i>
-                      {% elif i.action == 'delete' %}
-                        <i class="bi bi-circle-fill activity-badge text-danger align-self-start"></i>
-                      {% else %}
-                        <i class="bi bi-circle-fill activity-badge text-muted align-self-start"></i>
-                      {% endif %}
+                        <!-- BADGE (rang action_flag bo‘yicha) -->
+                        <i class="bi bi-circle-fill activity-badge
+                            {% if i.action_flag == 1 %} text-primary
+                            {% elif i.action_flag == 2 %} text-success
+                            {% elif i.action_flag == 3 %} text-danger
+                            {% else %} text-muted
+                            {% endif %}
+                            align-self-start">
+                        </i>
 
-                      <div class="activity-content">
-                        {% if i.user %}
-                          <strong>{{ i.user.username }}</strong> —
-                        {% endif %}
-                        {{ i.get_action_display }}:
-                        <span class="fw-bold">{{ i.model_name }}</span>
-                        {% if i.object_name %} ({{ i.object_name }}){% endif %}
-
-                        {% if i.description %}
-                          <br><small class="text-muted">{{ i.description }}</small>
-                        {% endif %}
-                      </div>
+                        <!-- CONTENT -->
+                        <div class="activity-content">
+                            <!-- Title -->
+                            <strong>{{ i.object_repr }}</strong>
+                            <!-- Description -->
+                            {% if i.action_flag == 1 %}
+                                taxrirlandi
+                            {% elif i.action_flag == 2 %}
+                               qo'shildi.
+                            {% elif i.action_flag == 3 %}
+                               o'chirildi.
+                            {% endif %}
+                        </div>
                     </div><!-- End activity item-->
-                  {% empty %}
-                    <p class="text-muted">Hozircha faoliyat loglari yo‘q.</p>
-                  {% endfor %}
+                    {% endfor %}
                 </div>
-
               </div>
             </div><!-- End Recent Activity -->
 
