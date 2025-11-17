@@ -62,7 +62,7 @@
                   <input type="text" name="fio_id" id="fio_id" class="form-control" required  placeholder="Sh.Muxamedov">
                 </div>
                 <div class="col-md-12">
-                  <label for="date_id" class="col-sm-2 col-form-label">Date</label>
+                  <label for="date_id" class="col-sm-2 col-form-label">Sana :</label>
                   <input type="date" name="date_id" id="date_id" required class="form-control">
                 </div>
                 <div class="col-md-12">
@@ -116,10 +116,10 @@
                         <b> 1.	Kompyuter va boshqa elektron qurilmalarga texnik va tizimli xizmat ko‘rsatish:</b>
                     </div>
                     <div class="mt-5">
-                       <b>1.1.</b> Biriktirilgan kompyuterlarga (shaxsiy kompyuter, monoblok, noutbuk, planshet va infokioskalar)  xizmat ko‘rsatish – <b id="techCount">52</b>
+                       <b>1.1.</b> Biriktirilgan kompyuterlarga (shaxsiy kompyuter, monoblok, noutbuk, planshet va infokioskalar)  xizmat ko‘rsatish – <b id="techkomp">52</b>
                     </div>
                     <div class="mt-5">
-                        <b>1.4.</b> A3 formatli printerlarga (tarmoq va tarmoqsiz lazer, purkovchi (струйный) va ko‘p funksiyali printerlar ) xizmat ko‘rsatish – <b>2 dona.</b>
+                        <b>1.4.</b> A3 formatli printerlarga (tarmoq va tarmoqsiz lazer, purkovchi (струйный) va ko‘p funksiyali printerlar ) xizmat ko‘rsatish – <b id="techpr">2 dona.</b>
                     </div>
                     <div class="row mt-5">
                         <div class="col-6 text-center p-5"><b>
@@ -226,7 +226,12 @@ $(document).ready(function(){
                 'pos_id': posId
             },
             success: function(data){
-                $('#techCount').text(data.count + ' ta texnika');
+
+                // Kompyuterlar soni
+                $('#techkomp').text(data.kompyuterlar + ' dona');
+
+                // Printerlar soni
+                $('#techpr').text(data.printerlar + ' dona');
             },
             error: function(err){
                 console.error("AJAX xato:", err);
@@ -234,12 +239,12 @@ $(document).ready(function(){
         });
     }
 
-    // Har bir select change bo‘lganda
+    // Selectlar o‘zgarsa
     $('#organization, #department, #position').on('change', function(){
         updateTechnicCount();
     });
 
-    // Sahifa yuklanganda texnika sonini chiqarish
+    // Sahifa yuklanganda
     updateTechnicCount();
 });
 </script>

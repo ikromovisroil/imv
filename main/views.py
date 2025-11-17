@@ -1,4 +1,6 @@
 from django.shortcuts import render,redirect,HttpResponseRedirect,get_object_or_404
+from unicodedata import category
+
 from .models import *
 from django.urls import reverse
 from django.contrib import messages
@@ -20,13 +22,14 @@ import json
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.admin.models import LogEntry
 from django.contrib.contenttypes.models import ContentType
+from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+
 
 def global_data(request):
     return {
         "global_organizations": Organization.objects.all(),
         "global_categorys": Category.objects.all(),
     }
-
 
 
 def index(request):
@@ -200,25 +203,33 @@ def get_technics_count(request):
     dep_id = request.GET.get('dep_id')
     pos_id = request.GET.get('pos_id')
 
-    # Default: barcha texnikalar
-    tec = Technics.objects.all()
+    # Asosiy querysetlar (QuerySet sifatida qoldiramiz)
+    kompyuterlar = Technics.objects.filter(
+        category__name__in=['Kompyuter', 'Monitor', 'Planshet']
+    )
+    printerlar = Technics.objects.filter(
+        category__name='Printer'
+    )
 
+    # Filtrlar to‘g‘ri qo‘llash
     if org_id:
-        tec = tec.filter(
-            Q(employee__organization_id=org_id) |
-            Q(employee__department__organization_id=org_id) |
-            Q(employee__position__department__organization_id=org_id)
-        )
-    if dep_id:
-        tec = tec.filter(
-            Q(employee__department_id=dep_id) |
-            Q(employee__position__department_id=dep_id)
-        )
-    if pos_id:
-        tec = tec.filter(employee__position_id=pos_id)
+        kompyuterlar = kompyuterlar.filter(employee__organization_id=org_id)
+        printerlar = printerlar.filter(employee__organization_id=org_id)
 
-    count = tec.count()
-    return JsonResponse({'count': count})
+    if dep_id:
+        kompyuterlar = kompyuterlar.filter(employee__department_id=dep_id)
+        printerlar = printerlar.filter(employee__department_id=dep_id)
+
+    if pos_id:
+        kompyuterlar = kompyuterlar.filter(employee__position_id=pos_id)
+        printerlar = printerlar.filter(employee__position_id=pos_id)
+
+    # JSON uchun faqat sonlar qaytaramiz
+    return JsonResponse({
+        "kompyuterlar": kompyuterlar.count(),
+        "printerlar": printerlar.count(),
+    })
+
 
 
 def document_get(request):
@@ -269,16 +280,20 @@ def document_post(request):
     # ✅ Qaysi obyekt tanlanganini aniqlash
 
     full_name = None
-    technic_count = 0
+    komp_count = 0
+    prin_count = 0
     if org:
         full_name = org
-        technic_count = Technics.objects.filter(employee__organization=org).count()
+        komp_count = Technics.objects.filter(employee__organization=org, category__name__in=['Kompyuter', 'Monitor', 'Planshet']).count()
+        prin_count = Technics.objects.filter(employee__organization=org, category__name='Printer').count()
     if dep:
         full_name = dep
-        technic_count = Technics.objects.filter(employee__department=dep).count()
+        komp_count = Technics.objects.filter(employee__department=dep, category__name__in=['Kompyuter', 'Monitor', 'Planshet']).count()
+        prin_count = Technics.objects.filter(employee__department=dep, category__name='Printer').count()
     if pos:
         full_name = pos
-        technic_count = Technics.objects.filter(employee__position=pos).count()
+        komp_count = Technics.objects.filter(employee__position=pos, category__name__in=['Kompyuter', 'Monitor', 'Planshet']).count()
+        prin_count = Technics.objects.filter(employee__position=pos, category__name='Printer').count()
 
     if not full_name:
         return HttpResponse("Tashkilot / bo‘lim / lavozim tanlanmagan!", status=400)
@@ -300,7 +315,8 @@ def document_post(request):
         'NAMBER': namber_id or '',
         'RIM': rim_id or '',
         'STYLE': full_name.name or '',
-        'KOMPCOUNT': str(technic_count) or '',
+        'KOMPCOUNT': str(komp_count) or '',
+        'PRINCOUNT': str(prin_count) or '',
     }
 
     # ✍️ Oddiy matnni almashtirish
@@ -311,7 +327,7 @@ def document_post(request):
                     run.text = run.text.replace(old, new)
                     run.font.name = 'Times New Roman'
                     run.font.size = Pt(12)
-                    if old in ['STYLE', 'FIO', 'DATA', 'NAMBER', 'KOMPCOUNT']:
+                    if old in ['STYLE', 'FIO', 'DATA', 'NAMBER', 'KOMPCOUNT', 'PRINCOUNT']:
                         run.font.bold = True
 
     # 🔄 Text box (shape) ichidagi matnni almashtirish
@@ -331,27 +347,50 @@ def ajax_load_technics(request):
     dep_id = request.GET.get('department')
     pos_id = request.GET.get('position')
 
-    technics_qs = Technics.objects.filter(is_active=True)
+    # 1) Asosiy querysetlar
+    kompyuterlar = Technics.objects.filter(
+        category__name__in=['Kompyuter', 'Monitor', 'Planshet']
+    )
+    printerlar = Technics.objects.filter(
+        category__name='Printer'
+    )
 
+    # 2) Filtrlar
     if org_id:
-        technics_qs = technics_qs.filter(employee__organization_id=org_id)
+        kompyuterlar = kompyuterlar.filter(employee__organization_id=org_id)
+        printerlar = printerlar.filter(employee__organization_id=org_id)
 
     if dep_id:
-        technics_qs = technics_qs.filter(employee__department_id=dep_id)
+        kompyuterlar = kompyuterlar.filter(employee__department_id=dep_id)
+        printerlar = printerlar.filter(employee__department_id=dep_id)
 
     if pos_id:
-        technics_qs = technics_qs.filter(employee__position_id=pos_id)
+        kompyuterlar = kompyuterlar.filter(employee__position_id=pos_id)
+        printerlar = printerlar.filter(employee__position_id=pos_id)
 
-    data = []
-    for idx, t in enumerate(technics_qs, start=1):
-        data.append({
+    # 3) JSON formatga tayyorlash
+    data_komp = []
+    for idx, t in enumerate(kompyuterlar, start=1):
+        data_komp.append({
             "num": idx,
             "name": t.name or "",
             "serial": t.serial or "",
             "moc": t.moc or "",
         })
 
-    return JsonResponse(data, safe=False)
+    data_printer = []
+    for idx, t in enumerate(printerlar, start=1):
+        data_printer.append({
+            "num": idx,
+            "name": t.name or "",
+            "serial": t.serial or "",
+        })
+
+    # 4) Ikkita jadval uchun JSON qaytariladi
+    return JsonResponse({
+        "kompyuterlar": data_komp,
+        "printerlar": data_printer,
+    })
 
 
 def hisobot_get(request):
@@ -365,6 +404,34 @@ def hisobot_get(request):
         'organizations': Organization.objects.filter(is_active=True),
     }
     return render(request, 'main/hisobot.html', context)
+
+
+def set_table_borders(table):
+    tbl = table._tbl
+
+    # tblPr mavjud bo'lmasa — yaratamiz
+    tblPr = tbl.tblPr
+    if tblPr is None:
+        tblPr = OxmlElement('w:tblPr')
+        tbl._element.insert(0, tblPr)
+
+    # tblBorders yaratish yoki topish
+    borders = tblPr.find(qn('w:tblBorders'))
+    if borders is None:
+        borders = OxmlElement('w:tblBorders')
+        tblPr.append(borders)
+
+    # 6 ta chiziq
+    for side in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
+        element = borders.find(qn(f'w:{side}'))
+        if element is None:
+            element = OxmlElement(f'w:{side}')
+            borders.append(element)
+
+        element.set(qn('w:val'), 'single')
+        element.set(qn('w:sz'), '8')
+        element.set(qn('w:color'), '000000')
+        element.set(qn('w:space'), '0')
 
 
 def set_cell_border(cell, **kwargs):
@@ -382,118 +449,156 @@ def set_cell_border(cell, **kwargs):
             tcPr.append(element)
 
 
-def set_cell_text(cell, text, bold=False, size_pt=11, center=False):
-    """Hujayraga matn yozish va font o‘rnatish."""
+def set_cell_text(cell, text, bold=False, center=False, size=11):
     cell.text = text or ''
     for p in cell.paragraphs:
-        if center:
-            p.alignment = 1  # markazlash
+        p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER if center else WD_PARAGRAPH_ALIGNMENT.LEFT
         for run in p.runs:
             run.font.name = 'Times New Roman'
-            run.font.size = Pt(size_pt)
-            run.font.bold = bold
+            run.font.size = Pt(size)
+            run.bold = bold
 
 
 def create_table(doc, title, data, headers):
-    """Sarlavha va jadval yaratish (masofa va format bilan)."""
-    # 📌 Bo‘lim sarlavhasi
-    heading_para = doc.add_paragraph()
-    heading_para.alignment = 0  # chapda
-    run = heading_para.add_run(title)
-    run.bold = True
-    run.font.name = 'Times New Roman'
-    run.font.size = Pt(10)
+    """
+    Jadvalni widths bo‘yicha yaratadi.
+    Agar data bo‘sh bo‘lsa — heading ham, jadval ham chiqmaydi.
+    """
 
-    # 🔹 Jadval yaratish
-    table = doc.add_table(rows=1, cols=len(headers))
-    try:
-        table.style = 'Table Grid'
-    except KeyError:
-        table.style = None
+    if not data:
+        return None, None
 
+    # --- Sarlavha (Heading) ---
+    heading = doc.add_paragraph()
+    r = heading.add_run(title)
+    r.bold = True
+    r.font.name = 'Times New Roman'
+    r.font.size = Pt(11)
+
+    # Ustunlar soni
+    col_count = len(headers)
+
+    # --- Widths tanlash ---
+    if col_count == 4:  # KOMPYUTER JADVALLARI
+        widths = [
+            Inches(0.5),
+            Inches(2),
+            Inches(2),
+            Inches(2),
+        ]
+
+    elif col_count == 3:  # PRINTER JADVALLARI
+        widths = [
+            Inches(0.5),
+            Inches(2.2),
+            Inches(2.2),
+        ]
+
+    else:
+        # default teng taqsimlash (foydalanilmaydi)
+        widths = [Inches(6 / col_count)] * col_count
+
+    # --- Jadval yaratish ---
+    table = doc.add_table(rows=1, cols=col_count)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
+    set_table_borders(table)
 
-    # Ustun kengliklari (inchlarda)
-    widths = [Inches(0.3), Inches(1.2), Inches(1.2), Inches(1.2)]
-
-    # Jadval sarlavhalari
+    # --- Headerlar ---
     hdr_cells = table.rows[0].cells
-    for i, h in enumerate(headers):
+    for i, header in enumerate(headers):
         hdr_cells[i].width = widths[i]
-        set_cell_text(hdr_cells[i], h, bold=True, center=True)
-        set_cell_border(hdr_cells[i],
-                        top={"val": "single", "sz": "8", "color": "000000"},
-                        left={"val": "single", "sz": "8", "color": "000000"},
-                        bottom={"val": "single", "sz": "8", "color": "000000"},
-                        right={"val": "single", "sz": "8", "color": "000000"})
+        set_cell_text(hdr_cells[i], header, bold=True, center=True)
 
-    # 🔹 Ma’lumotlarni to‘ldirish
+    # --- Data qatorlari ---
     for idx, item in enumerate(data, start=1):
         row = table.add_row()
         row.height = Inches(0.25)
         row.height_rule = WD_ROW_HEIGHT_RULE.EXACTLY
-        cells = row.cells
-        values = [
-            f"{idx}.",  # raqam va nuqta
-            item.name or '',
-            item.serial or '',
-            getattr(item, 'moc', '') or '',
-        ]
-        for i, val in enumerate(values):
-            set_cell_text(cells[i], val, center=(i == 0))  # 1-ustun markazda
-            set_cell_border(cells[i],
-                            top={"val": "single", "sz": "6", "color": "000000"},
-                            left={"val": "single", "sz": "6", "color": "000000"},
-                            bottom={"val": "single", "sz": "6", "color": "000000"},
-                            right={"val": "single", "sz": "6", "color": "000000"})
 
-    # Jadvaldan keyin bo‘sh satr qo‘shish
-    doc.add_paragraph()
+        # Kompyuter jadvali
+        if col_count == 4:
+            values = [
+                f"{idx}.",
+                item.name or "",
+                item.serial or "",
+                getattr(item, "moc", "") or "",
+            ]
 
-    return heading_para, table
+        # Printer jadvali
+        elif col_count == 3:
+            values = [
+                f"{idx}.",
+                item.name or "",
+                item.serial or "",
+            ]
+
+        # Hujayralarga yozish
+        for col_index, val in enumerate(values):
+            set_cell_text(
+                row.cells[col_index],
+                val,
+                center=(col_index == 0)  # 1-ustun center
+            )
+            row.cells[col_index].width = widths[col_index]
+
+    doc.add_paragraph()  # minimal bo‘sh joy
+    return heading, table
 
 
 def hisobot_post(request):
     if request.method != 'POST':
         return redirect('hisobot_get')
 
+    # tanlanganlar
     org_id = request.POST.get('organization')
     dep_id = request.POST.get('department')
     pos_id = request.POST.get('position')
 
-    org = Organization.objects.filter(id=org_id).first() if org_id and org_id.isdigit() else None
-    dep = Department.objects.filter(id=dep_id).first() if dep_id and dep_id.isdigit() else None
-    pos = Position.objects.filter(id=pos_id).first() if pos_id and pos_id.isdigit() else None
+    org = Organization.objects.filter(id=org_id).first() if org_id else None
+    dep = Department.objects.filter(id=dep_id).first() if dep_id else None
+    pos = Position.objects.filter(id=pos_id).first() if pos_id else None
 
-    # 🔹 3. Texnikalarni ajratish
-    kompyuterlar = Technics.objects.select_related('employee').filter(category_id__in=[1, 2, 3, 4])
-    printerlar = Technics.objects.select_related('employee').filter(category_id=2)
+    # --- Texnikalar ---
+    kompyuterlar = Technics.objects.filter(
+        category__name__in=['Kompyuter', 'Monitor', 'Planshet']
+    )
+
+    printerlar = Technics.objects.filter(
+        category__name='Printer'
+    )
+
     full_name = None
 
+    # *** FILTRLARNI TO‘G‘RI QO‘YISH ***
     if org:
         kompyuterlar = kompyuterlar.filter(employee__organization=org)
         printerlar = printerlar.filter(employee__organization=org)
         full_name = org
+
     if dep:
         kompyuterlar = kompyuterlar.filter(employee__department=dep)
         printerlar = printerlar.filter(employee__department=dep)
         full_name = dep
+
     if pos:
         kompyuterlar = kompyuterlar.filter(employee__position=pos)
         printerlar = printerlar.filter(employee__position=pos)
         full_name = pos
 
+
+    # --- DOCX TEMPLATE ---
     template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma2.docx')
     if not os.path.exists(template_path):
         return HttpResponse("Shablon fayl topilmadi!", status=404)
 
     doc = Document(template_path)
 
-    # 🔹 1. Matnli markerlarni almashtirish
+    # NAME almashtirish
     replacements = {
-        'NAME': full_name.name if dep else '',
+        'NAME': full_name.name if full_name else '',
     }
+
     for p in doc.paragraphs:
         for old, new in replacements.items():
             if old in p.text:
@@ -501,11 +606,10 @@ def hisobot_post(request):
                 for r in p.runs:
                     r.font.name = 'Times New Roman'
                     r.font.size = Pt(12)
-                    if old == 'NAME':
-                        r.font.bold = True
-                        r.font.underline = True
+                    r.font.bold = True
+                    r.font.underline = True
 
-    # 🔹 2. TABLE joyini topish
+    # TABLE joyini topish
     target_paragraph = None
     for p in doc.paragraphs:
         if 'TABLE' in p.text:
@@ -513,43 +617,60 @@ def hisobot_post(request):
             p.text = ''
             break
 
+    headers_pc = ['№', 'Rusumi', 'Kompyuter SR:', 'Monitor SR:']
+    headers_printer = ['№', 'Rusumi', 'Printer SR:']
 
-    # 🔹 4. Jadval sarlavhalari
-    headers = ['№', 'Rusumi', 'Kompyuter SR:', 'Monitor SR:']
-
+    # Kompyuter jadvali
     heading1, table1 = create_table(
         doc,
         "Kompyuterlar (shaxsiy kompyuter, monoblok, noutbuk, planshet va infokioskalar)",
         kompyuterlar,
-        headers
+        headers_pc
     )
+
     heading2, table2 = create_table(
         doc,
         "Printerlar (lazer, MFU, siyohli va boshqa printerlar)",
         printerlar,
-        headers
+        headers_printer
     )
 
-    # 🔹 5. TABLE joyiga qo‘yish
-    if target_paragraph is not None:
-        target_paragraph._p.addnext(heading1._p)
-        heading1._p.addnext(table1._tbl)
-        table1._tbl.addnext(heading2._p)
-        heading2._p.addnext(table2._tbl)
-    else:
-        doc.add_paragraph()
-        doc._body._body.append(heading1._p)
-        doc._body._body.append(table1._tbl)
-        doc._body._body.append(heading2._p)
-        doc._body._body.append(table2._tbl)
+    # === JOYLASHTIRISH ===
+    if target_paragraph:
 
-    # 🔹 6. Hujjatni jo‘natish
+        # Kompyuterlar bo'lsa
+        if table1:
+            target_paragraph._p.addnext(heading1._p)
+            heading1._p.addnext(table1._tbl)
+
+            # Printerlar ham bo'lsa → kompyuterdan keyin
+            if table2:
+                table1._tbl.addnext(heading2._p)
+                heading2._p.addnext(table2._tbl)
+
+        # Kompyuter bo‘lsa BO‘LMASA, lekin printer BO‘LSA
+        elif table2:
+            target_paragraph._p.addnext(heading2._p)
+            heading2._p.addnext(table2._tbl)
+
+    else:
+        # Shablonda TABLE topilmasa
+        if table1:
+            doc._body._body.append(heading1._p)
+            doc._body._body.append(table1._tbl)
+
+        if table2:
+            doc._body._body.append(heading2._p)
+            doc._body._body.append(table2._tbl)
+
+    # download
     response = HttpResponse(
         content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
     )
     response['Content-Disposition'] = 'attachment; filename="hisobot_yangi.docx"'
     doc.save(response)
     return response
+
 
 
 

@@ -98,9 +98,9 @@
                                 <th scope="col">Monitor SR:</th>
                               </tr>
                             </thead>
-                            <tbody id="technics_tbody">
+                            <tbody id="technics_kompyuterlar">
                                 {# Boshlang‘ichda bo‘sh bo‘lishi ham mumkin #}
-                                {% for i in technics %}
+                                {% for i in kompyuterlar %}
                                   <tr>
                                     <th scope="row">{{ forloop.counter }}</th>
                                     <td>{{ i.name }}</td>
@@ -123,16 +123,20 @@
                                 <th scope="col">№</th>
                                 <th scope="col">Rusumi</th>
                                 <th scope="col">Kompyuter SR:</th>
-                                <th scope="col">Monitor SR:</th>
                               </tr>
                             </thead>
-                            <tbody>
-                              <tr>
-                                <th scope="row">1</th>
-                                <td>Brandon Jacob</td>
-                                <td>Designer</td>
-                                <td>28</td>
-                              </tr>
+                            <tbody id="technics_printerlar" >
+                                {% for i in printerlar %}
+                                  <tr>
+                                    <th scope="row">{{ forloop.counter }}</th>
+                                    <td>{{ i.name }}</td>
+                                    <td>{{ i.serial }}</td>
+                                  </tr>
+                                {% empty %}
+                                  <tr>
+                                    <td colspan="4" class="text-center">Ma’lumot topilmadi</td>
+                                  </tr>
+                                {% endfor %}
                             </tbody>
                         </table>
                     </div>
@@ -232,43 +236,59 @@ $(document).ready(function(){
     }
 
     // 🔵 Eng muhim qism: texnikalarni yuklash
-    function loadTechnics(){
-        var orgId = $('#organization').val();
-        var depId = $('#department').val();
-        var posId = $('#position').val();
+   function loadTechnics(){
+    var orgId = $('#organization').val();
+    var depId = $('#department').val();
+    var posId = $('#position').val();
 
-        $.ajax({
-            url: "{% url 'ajax_load_technics' %}",
-            data: {
-                'organization': orgId,
-                'department': depId,
-                'position': posId,
-            },
-            success: function(data){
-                var tbody = $('#technics_tbody');
-                tbody.empty();
+    $.ajax({
+        url: "{% url 'ajax_load_technics' %}",
+        data: {
+            'organization': orgId,
+            'department': depId,
+            'position': posId,
+        },
+        success: function(data){
 
-                if(!data || data.length === 0){
-                    tbody.append(
-                        '<tr><td colspan="4" class="text-center">Ma’lumot topilmadi</td></tr>'
-                    );
-                    return;
-                }
+            // 1) Kompyuterlar jadvali
+            var komp = $('#technics_kompyuterlar');
+            komp.empty();
 
-                $.each(data, function(i, item){
-                    var row = `
+            if(!data.kompyuterlar || data.kompyuterlar.length === 0){
+                komp.append('<tr><td colspan="4" class="text-center">Ma’lumot topilmadi</td></tr>');
+            } else {
+                $.each(data.kompyuterlar, function(i, item){
+                    komp.append(`
                         <tr>
-                            <th scope="row">${item.num}</th>
+                            <th>${item.num}</th>
                             <td>${item.name}</td>
                             <td>${item.serial}</td>
                             <td>${item.moc}</td>
                         </tr>
-                    `;
-                    tbody.append(row);
+                    `);
                 });
             }
-        });
-    }
+
+            // 2) Printerlar jadvali
+            var print = $('#technics_printerlar');
+            print.empty();
+
+            if(!data.printerlar || data.printerlar.length === 0){
+                print.append('<tr><td colspan="4" class="text-center">Ma’lumot topilmadi</td></tr>');
+            } else {
+                $.each(data.printerlar, function(i, item){
+                    print.append(`
+                        <tr>
+                            <th>${item.num}</th>
+                            <td>${item.name}</td>
+                            <td>${item.serial}</td>
+                        </tr>
+                    `);
+                });
+            }
+        }
+    });
+}
 
     // 🔁 Selectlar o‘zgarganda texnikalarni yangilash
     $('#organization').change(function(){
