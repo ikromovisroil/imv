@@ -2,212 +2,209 @@
 {% load static %}
 
 {% block title %}
-    <title>index</title>
+<title>Tashkilot texnikalari</title>
 {% endblock title %}
-
-{% block css %}
-{% endblock css %}
 
 {% block content %}
 
-  <main id="main" class="main">
+<main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>Texnikalar ro'yxati</h1>
-    </div><!-- End Page Title -->
-
+        <h1>{{ organizations.name }} — {{ organizations.technics_count }} ta texnika</h1>
+    </div>
 
     <section class="section">
       <div class="row">
         <div class="col-lg-12">
-          <div class="card recent-sales overflow-auto mb-3">
-              <div class="alert alert-primary alert-dismissible">
-                <h4>{{organization.name}} — {{ organization.technics_count }} ta texnika</h4>
-              </div>
-              <div class="card-body">
-              <!-- Default Table -->
-                {% if organization.employee_set.exists %}
+        <!-- ================= DEPARTMENT LEVEL ================= -->
+        {% for dep in departments %}
+        <div class="card recent-sales overflow-auto mb-3">
+            <div class="alert alert-warning alert-dismissible">
+                <h4>{{ dep.name }} — {{ dep.technics_count }} ta texnika</h4>
+            </div>
+            <div class="card-body">
+                {% if dep.employee_set.exists %}
                 <table class="table table-bordered">
                     <thead class="table-secondary">
-                      <tr>
-                        <th>#</th>
-                        <th>Lavozim</th>
-                        <th>F.I.O</th>
-                        <th>Texnika nomi</th>
-                        <th>I/N</th>
-                        <th>S/N</th>
-                        <th>IP</th>
-                        <th>MAC</th>
-                        <th>Yil</th>
-                      </tr>
+                        <tr>
+                            <th>#</th>
+                            <th>Lavozim</th>
+                            <th>F.I.O</th>
+                            <th>Texnika nomi</th>
+                            <th>I/N</th>
+                            <th>S/N</th>
+                            <th>IP</th>
+                            <th>MAC</th>
+                            <th>Yil</th>
+                        </tr>
                     </thead>
                     <tbody>
-                    {% for emp in organization.employee_set.all %}
-                        {% if emp.organization and not emp.department and not emp.position %}
-                            {% with emp.technics_set.all as techs %}
-                                {% if techs %}
-                                    {# ---- TEXNIKASI BOR XODIM ---- #}
-                                    {% for tech in techs %}
-                                    <tr>
-                                        {% if forloop.first %}
-                                            <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
-                                            <td rowspan="{{ techs.count }}">{{ emp.rank|default:"" }}</td>
-                                            <td rowspan="{{ techs.count }}">{{ emp.full_name|default:"" }}</td>
-                                        {% endif %}
-                                        <td>{{ tech.category|default:"" }} ({{ tech.name|default:"" }})</td>
-                                        <td>{{ tech.inventory|default:"" }}</td>
-                                        <td>{{ tech.serial|default:"" }}</td>
-                                        <td>{{ tech.ip|default:"" }}</td>
-                                        <td>{{ tech.moc|default:"" }}</td>
-                                        <td>{{ tech.year|default:"" }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                {% else %}
-                                    {# ---- TEXNIKASI YO‘Q XODIM ---- #}
-                                    <tr>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td>{{ emp.rank|default:"" }}</td>
-                                        <td>{{ emp.full_name|default:"" }}</td>
-                                        <td colspan="6" class="text-center">— Texnika biriktirilmagan —</td>
-                                    </tr>
-                                {% endif %}
-                            {% endwith %}
+                    {% for emp in dep.employee_set.all %}
+                        {% if emp.department and not emp.directorate and not emp.division %}
+                        {% with techs=emp.technics_set.all %}
+                            {% if techs %}
+                                {% for tech in techs %}
+                                <tr>
+                                    {% if forloop.first %}
+                                        <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
+                                        <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
+                                        <td rowspan="{{ techs.count }}">{{ emp.full_name }}</td>
+                                    {% endif %}
+                                    <td>{{ tech.category }} ({{ tech.name }})</td>
+                                    <td>{{ tech.inventory }}</td>
+                                    <td>{{ tech.serial }}</td>
+                                    <td>{{ tech.ip }}</td>
+                                    <td>{{ tech.moc }}</td>
+                                    <td>{{ tech.year }}</td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td>{{ forloop.counter }}</td>
+                                    <td>{{ emp.rank }}</td>
+                                    <td>{{ emp.full_name }}</td>
+                                    <td colspan="6" class="text-center">— Texnika yo‘q —</td>
+                                </tr>
+                            {% endif %}
+                        {% endwith %}
                         {% endif %}
                     {% endfor %}
                     </tbody>
                 </table>
                 {% endif %}
-                {% for dep in departments %}
-                  <div class="card recent-sales overflow-auto mb-3">
-                  <div class="alert alert-success alert-dismissible">
-                    <h4>{{ dep.name }} — {{ dep.technics_count }} ta texnika</h4>
-                  </div>
-                  <div class="card-body">
-                    {% if dep.employee_set.exists %}
-                    <table class="table table-bordered mb-0">
-                        <thead class="table-secondary">
-                            <tr>
-                                <th>#</th>
-                                <th>Lavozim</th>
-                                <th>F.I.O</th>
-                                <th>Texnika nomi</th>
-                                <th>I/N</th>
-                                <th>S/N</th>
-                                <th>IP</th>
-                                <th>MAC</th>
-                                <th>Yil</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for emp in dep.employee_set.all %}
-                          {% if emp.department and not emp.position %}
-                            {% with emp.technics_set.all as techs %}
-                                {% if techs %}
-                                    {# ---- TEXNIKASI BOR XODIM ---- #}
-                                    {% for tech in techs %}
-                                    <tr>
-                                        {% if forloop.first %}
-                                            <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
-                                            <td rowspan="{{ techs.count }}">{{ emp.rank|default:"" }}</td>
-                                            <td rowspan="{{ techs.count }}">{{ emp.full_name|default:"" }}</td>
-                                        {% endif %}
-                                        <td>{{ tech.category|default:"" }} ({{ tech.name|default:"" }})</td>
-                                        <td>{{ tech.inventory|default:"" }}</td>
-                                        <td>{{ tech.serial|default:"" }}</td>
-                                        <td>{{ tech.ip|default:"" }}</td>
-                                        <td>{{ tech.moc|default:"" }}</td>
-                                        <td>{{ tech.year|default:"" }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                {% else %}
-                                    {# ---- TEXNIKASI YO‘Q XODIM ---- #}
-                                    <tr>
-                                        <td>{{ forloop.counter }}</td>
-                                        <td>{{ emp.rank|default:"" }}</td>
-                                        <td>{{ emp.full_name|default:"" }}</td>
-                                        <td colspan="6" class="text-center">— Texnika biriktirilmagan —</td>
-                                    </tr>
-                                {% endif %}
-                            {% endwith %}
-                          {% endif %}
-                        {% endfor %}
-                        </tbody>
-                    </table>
-                    {% endif %}
-                  </div>
-                  {% if dep.position_set.exists %}
-                    {% for pos in dep.position_set.all %}
-                      <div class="card-body">
-                        <div class="card mb-2">
-                          <div class="alert alert-info alert-dismissible">
-                            <h5>{{ pos.name }} — {{ pos.technics_count }} ta texnika</h5>
-                          </div>
-                          {% if pos.employee_set.exists %}
-                          <div class="card-body p-0 m-3">
-                            <table class="table table-bordered">
-                              <thead class="table-secondary">
-                                <tr>
-                                  <th>#</th>
-                                  <th>Lavozim</th>
-                                  <th>F.I.O</th>
-                                  <th>Texnika nomi</th>
-                                  <th>I/N</th>
-                                  <th>S/N</th>
-                                  <th>IP</th>
-                                  <th>MAC</th>
-                                  <th>Yil</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {% for emp in pos.employee_set.all %}
-                                  {% with emp.technics_set.all as techs %}
-                                    {% if techs %}
-                                        {# ---- TEXNIKASI BOR XODIM ---- #}
-                                        {% for tech in techs %}
-                                        <tr>
-                                            {% if forloop.first %}
-                                                <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
-                                                <td rowspan="{{ techs.count }}">{{ emp.rank|default:"" }}</td>
-                                                <td rowspan="{{ techs.count }}">{{ emp.full_name|default:"" }}</td>
-                                            {% endif %}
-                                            <td>{{ tech.category|default:"" }} ({{ tech.name|default:"" }})</td>
-                                            <td>{{ tech.inventory|default:"" }}</td>
-                                            <td>{{ tech.serial|default:"" }}</td>
-                                            <td>{{ tech.ip|default:"" }}</td>
-                                            <td>{{ tech.moc|default:"" }}</td>
-                                            <td>{{ tech.year|default:"" }}</td>
-                                        </tr>
-                                        {% endfor %}
-                                    {% else %}
-                                        {# ---- TEXNIKASI YO‘Q XODIM ---- #}
-                                        <tr>
-                                            <td>{{ forloop.counter }}</td>
-                                            <td>{{ emp.rank|default:"" }}</td>
-                                            <td>{{ emp.full_name|default:"" }}</td>
-                                            <td colspan="6" class="text-center">— Texnika biriktirilmagan —</td>
-                                        </tr>
-                                    {% endif %}
-                                  {% endwith %}
-                                {% endfor %}
-                              </tbody>
-                            </table>
-                          </div>
-                          {% endif %}
+                <!-- ================= DIRECTORATE LEVEL ================= -->
+                {% for dir in directorates %}
+                 {% if dir.department_id == dep.id %}
+                    <div class="card recent-sales overflow-auto mb-3">
+                        <div class="alert alert-success alert-dismissible">
+                            <h4>{{ dir.name }} — {{ dir.technics_count }} ta texnika</h4>
                         </div>
-                      </div>
-                    {% endfor %}
+                        <div class="card-body">
+                            {% if dir.employee_set.exists %}
+                            <table class="table table-bordered">
+                                <thead class="table-secondary">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Lavozim</th>
+                                        <th>F.I.O</th>
+                                        <th>Texnika nomi</th>
+                                        <th>I/N</th>
+                                        <th>S/N</th>
+                                        <th>IP</th>
+                                        <th>MAC</th>
+                                        <th>Yil</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+
+                                {% for emp in dir.employee_set.all %}
+                                    {% if emp.directorate and not emp.division %}
+                                    {% with techs=emp.technics_set.all %}
+                                        {% if techs %}
+                                            {% for tech in techs %}
+                                            <tr>
+                                                {% if forloop.first %}
+                                                    <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
+                                                    <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
+                                                    <td rowspan="{{ techs.count }}">{{ emp.full_name }}</td>
+                                                {% endif %}
+                                                <td>{{ tech.category }} ({{ tech.name }})</td>
+                                                <td>{{ tech.inventory }}</td>
+                                                <td>{{ tech.serial }}</td>
+                                                <td>{{ tech.ip }}</td>
+                                                <td>{{ tech.moc }}</td>
+                                                <td>{{ tech.year }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        {% else %}
+                                            <tr>
+                                                <td>{{ forloop.counter }}</td>
+                                                <td>{{ emp.rank }}</td>
+                                                <td>{{ emp.full_name }}</td>
+                                                <td colspan="6" class="text-center">— Texnika yo‘q —</td>
+                                            </tr>
+                                        {% endif %}
+                                    {% endwith %}
+                                    {% endif %}
+                                {% endfor %}
+
+                                </tbody>
+                            </table>
+                            {% endif %}
+                            <!-- ================= DIVISION LEVEL ================= -->
+                            {% for div in divisions %}
+                                {% if div.directorate_id == dir.id %}
+                                <div class="card recent-sales overflow-auto mb-3">
+                                    <div class="alert alert-primary alert-dismissible">
+                                        <h4>{{ div.name }} — {{ div.technics_count }} ta texnika</h4>
+                                    </div>
+
+                                    <div class="card-body">
+                                        {% if div.employee_set.exists %}
+                                        <table class="table table-bordered mb-0">
+                                            <thead class="table-secondary">
+                                                <tr>
+                                                    <th>#</th>
+                                                    <th>Lavozim</th>
+                                                    <th>F.I.O</th>
+                                                    <th>Texnika nomi</th>
+                                                    <th>I/N</th>
+                                                    <th>S/N</th>
+                                                    <th>IP</th>
+                                                    <th>MAC</th>
+                                                    <th>Yil</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+
+                                            {% for emp in div.employee_set.all %}
+                                            {% with techs=emp.technics_set.all %}
+                                                {% if techs %}
+                                                    {% for tech in techs %}
+                                                    <tr>
+                                                        {% if forloop.first %}
+                                                            <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
+                                                            <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
+                                                            <td rowspan="{{ techs.count }}">{{ emp.full_name }}</td>
+                                                        {% endif %}
+                                                        <td>{{ tech.category }} ({{ tech.name }})</td>
+                                                        <td>{{ tech.inventory }}</td>
+                                                        <td>{{ tech.serial }}</td>
+                                                        <td>{{ tech.ip }}</td>
+                                                        <td>{{ tech.moc }}</td>
+                                                        <td>{{ tech.year }}</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                {% else %}
+                                                    <tr>
+                                                        <td>{{ forloop.counter }}</td>
+                                                        <td>{{ emp.rank }}</td>
+                                                        <td>{{ emp.full_name }}</td>
+                                                        <td colspan="6">— Texnika yo‘q —</td>
+                                                    </tr>
+                                                {% endif %}
+                                            {% endwith %}
+                                            {% endfor %}
+
+                                            </tbody>
+                                        </table>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
                   {% endif %}
-                  </div>
                 {% endfor %}
-              </div>
-          </div>
+
+            </div>
+        </div>
+        {% endfor %}
         </div>
       </div>
     </section>
 
-  </main><!-- End #main -->
+</main>
 
 {% endblock content %}
-
-{% block js %}
-{% endblock js %}

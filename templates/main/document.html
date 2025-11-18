@@ -36,7 +36,7 @@
                     </select>
                 </div>
                 <div class="col-12">
-                  <label for="department" class="form-label">Boshqarma :</label>
+                  <label for="department" class="form-label">Departament :</label>
                     <select id="department" name="department" class="form-select">
                         <option value="">Tanlang...</option>
                         {% for dep in departments %}
@@ -45,11 +45,21 @@
                     </select>
                 </div>
                 <div class="col-12">
-                  <label for="position" class="form-label">Bo‘lim :</label>
-                    <select id="position" name="position" class="form-select">
+                  <label for="directorate" class="form-label">Boshqarma :</label>
+                    <select id="directorate" name="directorate" class="form-select">
                         <option value="">Tanlang...</option>
-                        {% for pos in positions %}
-                            <option value="{{ pos.id }}" {% if selected_pos == pos.id|stringformat:"s" %}selected{% endif %}>{{ pos.name }}</option>
+                        {% for dir in directorates %}
+                            <option value="{{ dir.id }}" {% if selected_dir == dir.id|stringformat:"s" %}selected{% endif %}>{{ dir.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                  <label for="division" class="form-label">bo'lim :</label>
+                    <select id="division" name="division" class="form-select">
+                        <option value="">Tanlang...</option>
+                        {% for div in divisions %}
+                            <option value="{{ div.id }}" {% if selected_div == div.id|stringformat:"s" %}selected{% endif %}>{{ div
+                        .name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -145,20 +155,22 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-$(document).ready(function(){
+$(document).ready(function () {
 
-    function loadDepartments(orgId, selectedDepId=null){
+    // 1. DEPARTAMENTLARNI YUKLASH
+    function loadDepartments(orgId, selectedDepId = null) {
         $('#department').html('<option value="">Yuklanmoqda...</option>');
-        $('#position').html('<option value="">Tanlang...</option>');
+        $('#directorate').html('<option value="">Tanlang...</option>');
+        $('#division').html('<option value="">Tanlang...</option>');
 
-        if(orgId){
+        if (orgId) {
             $.ajax({
                 url: "{% url 'ajax_load_departments' %}",
-                data: {'organization': orgId},
-                success: function(data){
-                    var options = '<option value="">Tanlang...</option>';
-                    $.each(data, function(i, dep){
-                        var selected = (dep.id == selectedDepId) ? 'selected' : '';
+                data: { 'organization': orgId },
+                success: function (data) {
+                    let options = '<option value="">Tanlang...</option>';
+                    $.each(data, function (i, dep) {
+                        let selected = (selectedDepId == dep.id) ? 'selected' : '';
                         options += `<option value="${dep.id}" ${selected}>${dep.name}</option>`;
                     });
                     $('#department').html(options);
@@ -169,46 +181,87 @@ $(document).ready(function(){
         }
     }
 
-    function loadPositions(depId, selectedPosId=null){
-        $('#position').html('<option value="">Yuklanmoqda...</option>');
-        if(depId){
+    // 2. DIRECTORATE YUKLASH
+    function loadDirectorate(depId, selectedDirId = null) {
+        $('#directorate').html('<option value="">Yuklanmoqda...</option>');
+        $('#division').html('<option value="">Tanlang...</option>');
+
+        if (depId) {
             $.ajax({
-                url: "{% url 'ajax_load_positions' %}",
-                data: {'department': depId},
-                success: function(data){
-                    var options = '<option value="">Tanlang...</option>';
-                    $.each(data, function(i, pos){
-                        var selected = (pos.id == selectedPosId) ? 'selected' : '';
-                        options += `<option value="${pos.id}" ${selected}>${pos.name}</option>`;
+                url: "{% url 'ajax_load_directorate' %}",
+                data: { 'department': depId },
+                success: function (data) {
+                    let options = '<option value="">Tanlang...</option>';
+                    $.each(data, function (i, dir) {
+                        let selected = (selectedDirId == dir.id) ? 'selected' : '';
+                        options += `<option value="${dir.id}" ${selected}>${dir.name}</option>`;
                     });
-                    $('#position').html(options);
+                    $('#directorate').html(options);
                 }
             });
         } else {
-            $('#position').html('<option value="">Tanlang...</option>');
+            $('#directorate').html('<option value="">Tanlang...</option>');
         }
     }
 
-    $('#organization').change(function(){
+    // 3. DIVISION YUKLASH
+    function loadDivision(dirId, selectedDivId = null) {
+        $('#division').html('<option value="">Yuklanmoqda...</option>');
+
+        if (dirId) {
+            $.ajax({
+                url: "{% url 'ajax_load_division' %}",
+                data: { 'directorate': dirId },
+                success: function (data) {
+                    let options = '<option value="">Tanlang...</option>';
+                    $.each(data, function (i, div) {
+                        let selected = (selectedDivId == div.id) ? 'selected' : '';
+                        options += `<option value="${div.id}" ${selected}>${div.name}</option>`;
+                    });
+                    $('#division').html(options);
+                }
+            });
+        } else {
+            $('#division').html('<option value="">Tanlang...</option>');
+        }
+    }
+
+
+    // === EVENTLAR ===
+
+    $('#organization').change(function () {
         loadDepartments($(this).val());
     });
 
-    $('#department').change(function(){
-        loadPositions($(this).val());
+    $('#department').change(function () {
+        loadDirectorate($(this).val());
     });
 
-    // Oldindan tanlangan qiymatlarni sahifa yuklanganda qo‘shish
-    var initialOrg = '{{ selected_org }}';
-    var initialDep = '{{ selected_dep }}';
-    var initialPos = '{{ selected_pos }}';
+    $('#directorate').change(function () {
+        loadDivision($(this).val());
+    });
 
-    if(initialOrg){
+
+    // === OLDINGI TANLANGAN QIYMATLARNI QAYTA TIKLASH ===
+
+    let initialOrg = '{{ selected_org }}';
+    let initialDep = '{{ selected_dep }}';
+    let initialDir = '{{ selected_dir }}';
+    let initialDiv = '{{ selected_div }}';
+
+    if (initialOrg) {
         $('#organization').val(initialOrg);
         loadDepartments(initialOrg, initialDep);
-        if(initialDep){
-            loadPositions(initialDep, initialPos);
+
+        if (initialDep) {
+            loadDirectorate(initialDep, initialDir);
+
+            if (initialDir) {
+                loadDivision(initialDir, initialDiv);
+            }
         }
     }
+
 });
 
 $(document).ready(function(){
@@ -216,14 +269,16 @@ $(document).ready(function(){
     function updateTechnicCount(){
         const orgId = $('#organization').val();
         const depId = $('#department').val();
-        const posId = $('#position').val();
+        const dirId = $('#directorate').val();
+        const divId = $('#division').val();
 
         $.ajax({
             url: "{% url 'get_technics_count' %}",
             data: {
                 'org_id': orgId,
                 'dep_id': depId,
-                'pos_id': posId
+                'dir_id': dirId,
+                'div_id': divId
             },
             success: function(data){
 
@@ -239,12 +294,12 @@ $(document).ready(function(){
         });
     }
 
-    // Selectlar o‘zgarsa
-    $('#organization, #department, #position').on('change', function(){
+    // Har qanday select o‘zgarganda
+    $('#organization, #department, #directorate, #division').on('change', function(){
         updateTechnicCount();
     });
 
-    // Sahifa yuklanganda
+    // Sahifa yangi yuklanganda ham hisoblasin
     updateTechnicCount();
 });
 </script>

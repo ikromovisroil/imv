@@ -16,8 +16,8 @@ class Organization(models.Model):
         db_table = 'organization'
 
 
-# Viloyat.
-class Region(models.Model):
+# Lavozim.
+class Structure(models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
@@ -28,13 +28,12 @@ class Region(models.Model):
         return self.name
 
     class Meta:
-        db_table = 'region'
+        db_table = 'structure'
 
 
-# bo'lim.
 class Department(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.SET_NULL,null=True,blank=True)
-    region = models.ForeignKey(Region, on_delete=models.SET_NULL,null=True,blank=True)
+    structure = models.ForeignKey(Structure, on_delete=models.SET_NULL, null=True, blank=True)
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
@@ -49,7 +48,7 @@ class Department(models.Model):
 
 
 # Shtat.
-class Position(models.Model):
+class Directorate(models.Model):
     department = models.ForeignKey(Department, on_delete=models.SET_NULL,null=True,blank=True)
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
@@ -61,7 +60,24 @@ class Position(models.Model):
         return self.name
 
     class Meta:
-        db_table = 'position'
+        db_table = 'directorate'
+
+
+# Shtat.
+class Division(models.Model):
+    directorate = models.ForeignKey(Directorate, on_delete=models.SET_NULL,null=True,blank=True)
+    name = models.CharField(max_length=200)
+    is_active = models.BooleanField(default=True)
+    author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
+    date_creat = models.DateField(auto_now_add=True)
+    date_edit = models.DateField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        db_table = 'division'
+
 
 
 # Lavozim.
@@ -81,7 +97,8 @@ class Rank(models.Model):
 
 # Xodim.
 class Employee(models.Model):
-    position = models.ForeignKey(Position, on_delete=models.SET_NULL, null=True, blank=True)
+    division = models.ForeignKey(Division, on_delete=models.SET_NULL, null=True, blank=True)
+    directorate = models.ForeignKey(Directorate, on_delete=models.SET_NULL, null=True, blank=True)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True)
     organization = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True)
     rank = models.ForeignKey(Rank, on_delete=models.SET_NULL, null=True, blank=True)
@@ -93,10 +110,15 @@ class Employee(models.Model):
     date_edit = models.DateField(auto_now=True)
 
     def save(self, *args, **kwargs):
-        # Avtomatik pog‘ona ketma-ketligi
-        if self.position and self.position.department:
-            self.department = self.position.department
+        # Agar division tanlangan bo‘lsa → directorate avtomatik to‘lsin
+        if self.division and self.division.directorate:
+            self.directorate = self.division.directorate
 
+        # Agar directorate tanlangan bo‘lsa → department avtomatik to‘lsin
+        if self.directorate and self.directorate.department:
+            self.department = self.directorate.department
+
+        # Agar department tanlangan bo‘lsa → organization avtomatik to‘lsin
         if self.department and self.department.organization:
             self.organization = self.department.organization
 

@@ -36,7 +36,7 @@
                     </select>
                 </div>
                 <div class="col-12">
-                  <label for="department" class="form-label">Boshqarma :</label>
+                  <label for="department" class="form-label">Departament :</label>
                     <select id="department" name="department" class="form-select">
                         <option value="">Tanlang...</option>
                         {% for dep in departments %}
@@ -45,11 +45,21 @@
                     </select>
                 </div>
                 <div class="col-12">
-                  <label for="position" class="form-label">Bo‘lim :</label>
-                    <select id="position" name="position" class="form-select">
+                  <label for="directorate" class="form-label">Boshqarma :</label>
+                    <select id="directorate" name="directorate" class="form-select">
                         <option value="">Tanlang...</option>
-                        {% for pos in positions %}
-                            <option value="{{ pos.id }}" {% if selected_pos == pos.id|stringformat:"s" %}selected{% endif %}>{{ pos.name }}</option>
+                        {% for dir in directorates %}
+                            <option value="{{ dir.id }}" {% if selected_dir == dir.id|stringformat:"s" %}selected{% endif %}>{{ dir.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                  <label for="division" class="form-label">bo'lim :</label>
+                    <select id="division" name="division" class="form-select">
+                        <option value="">Tanlang...</option>
+                        {% for div in divisions %}
+                            <option value="{{ div.id }}" {% if selected_div == div.id|stringformat:"s" %}selected{% endif %}>{{ div
+                        .name }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -182,82 +192,140 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-$(document).ready(function(){
+$(document).ready(function () {
 
-    function loadDepartments(orgId, selectedDepId=null){
+    // 1. DEPARTAMENTLARNI YUKLASH
+    function loadDepartments(orgId, selectedDepId = null) {
         $('#department').html('<option value="">Yuklanmoqda...</option>');
-        $('#position').html('<option value="">Tanlang...</option>');
+        $('#directorate').html('<option value="">Tanlang...</option>');
+        $('#division').html('<option value="">Tanlang...</option>');
 
-        if(orgId){
+        if (orgId) {
             $.ajax({
                 url: "{% url 'ajax_load_departments' %}",
-                data: {'organization': orgId},
-                success: function(data){
-                    var options = '<option value="">Tanlang...</option>';
-                    $.each(data, function(i, dep){
-                        var selected = (dep.id == selectedDepId) ? 'selected' : '';
+                data: { 'organization': orgId },
+                success: function (data) {
+                    let options = '<option value="">Tanlang...</option>';
+                    $.each(data, function (i, dep) {
+                        let selected = (selectedDepId == dep.id) ? 'selected' : '';
                         options += `<option value="${dep.id}" ${selected}>${dep.name}</option>`;
                     });
                     $('#department').html(options);
-
-                    // Tashkilot tanlangandan keyin texnikalarni ham yangilaymiz
-                    loadTechnics();
                 }
             });
         } else {
             $('#department').html('<option value="">Tanlang...</option>');
-            $('#position').html('<option value="">Tanlang...</option>');
-            loadTechnics(); // hammasi bo‘sh bo‘lsa jadvalni tozalaymiz
         }
     }
 
-    function loadPositions(depId, selectedPosId=null){
-        $('#position').html('<option value="">Yuklanmoqda...</option>');
-        if(depId){
-            $.ajax({
-                url: "{% url 'ajax_load_positions' %}",
-                data: {'department': depId},
-                success: function(data){
-                    var options = '<option value="">Tanlang...</option>';
-                    $.each(data, function(i, pos){
-                        var selected = (pos.id == selectedPosId) ? 'selected' : '';
-                        options += `<option value="${pos.id}" ${selected}>${pos.name}</option>`;
-                    });
-                    $('#position').html(options);
+    // 2. DIRECTORATE YUKLASH
+    function loadDirectorate(depId, selectedDirId = null) {
+        $('#directorate').html('<option value="">Yuklanmoqda...</option>');
+        $('#division').html('<option value="">Tanlang...</option>');
 
-                    // Boshqarma tanlangandan keyin texnikalarni ham yangilaymiz
-                    loadTechnics();
+        if (depId) {
+            $.ajax({
+                url: "{% url 'ajax_load_directorate' %}",
+                data: { 'department': depId },
+                success: function (data) {
+                    let options = '<option value="">Tanlang...</option>';
+                    $.each(data, function (i, dir) {
+                        let selected = (selectedDirId == dir.id) ? 'selected' : '';
+                        options += `<option value="${dir.id}" ${selected}>${dir.name}</option>`;
+                    });
+                    $('#directorate').html(options);
                 }
             });
         } else {
-            $('#position').html('<option value="">Tanlang...</option>');
-            loadTechnics();
+            $('#directorate').html('<option value="">Tanlang...</option>');
         }
     }
 
-    // 🔵 Eng muhim qism: texnikalarni yuklash
-   function loadTechnics(){
-    var orgId = $('#organization').val();
-    var depId = $('#department').val();
-    var posId = $('#position').val();
+    // 3. DIVISION YUKLASH
+    function loadDivision(dirId, selectedDivId = null) {
+        $('#division').html('<option value="">Yuklanmoqda...</option>');
+
+        if (dirId) {
+            $.ajax({
+                url: "{% url 'ajax_load_division' %}",
+                data: { 'directorate': dirId },
+                success: function (data) {
+                    let options = '<option value="">Tanlang...</option>';
+                    $.each(data, function (i, div) {
+                        let selected = (selectedDivId == div.id) ? 'selected' : '';
+                        options += `<option value="${div.id}" ${selected}>${div.name}</option>`;
+                    });
+                    $('#division').html(options);
+                }
+            });
+        } else {
+            $('#division').html('<option value="">Tanlang...</option>');
+        }
+    }
+
+
+    // === EVENTLAR ===
+
+    $('#organization').change(function () {
+        loadDepartments($(this).val());
+    });
+
+    $('#department').change(function () {
+        loadDirectorate($(this).val());
+    });
+
+    $('#directorate').change(function () {
+        loadDivision($(this).val());
+    });
+
+
+    // === OLDINGI TANLANGAN QIYMATLARNI QAYTA TIKLASH ===
+
+    let initialOrg = '{{ selected_org }}';
+    let initialDep = '{{ selected_dep }}';
+    let initialDir = '{{ selected_dir }}';
+    let initialDiv = '{{ selected_div }}';
+
+    if (initialOrg) {
+        $('#organization').val(initialOrg);
+        loadDepartments(initialOrg, initialDep);
+
+        if (initialDep) {
+            loadDirectorate(initialDep, initialDir);
+
+            if (initialDir) {
+                loadDivision(initialDir, initialDiv);
+            }
+        }
+    }
+
+});
+
+// 🔵 Eng muhim qism: texnikalarni yuklash
+function loadTechnics() {
+    const orgId = $('#organization').val();
+    const depId = $('#department').val();
+    const dirId = $('#directorate').val();
+    const divId = $('#division').val();
 
     $.ajax({
         url: "{% url 'ajax_load_technics' %}",
         data: {
             'organization': orgId,
             'department': depId,
-            'position': posId,
+            'directorate': dirId,
+            'division': divId,
         },
-        success: function(data){
+        success: function (data) {
 
-            // 1) Kompyuterlar jadvali
-            var komp = $('#technics_kompyuterlar');
+            // Kompyuterlar
+            const komp = $('#technics_kompyuterlar');
             komp.empty();
 
-            if(!data.kompyuterlar || data.kompyuterlar.length === 0){
+            if (!data.kompyuterlar.length) {
                 komp.append('<tr><td colspan="4" class="text-center">Ma’lumot topilmadi</td></tr>');
             } else {
-                $.each(data.kompyuterlar, function(i, item){
+                data.kompyuterlar.forEach((item) => {
                     komp.append(`
                         <tr>
                             <th>${item.num}</th>
@@ -269,14 +337,14 @@ $(document).ready(function(){
                 });
             }
 
-            // 2) Printerlar jadvali
-            var print = $('#technics_printerlar');
+            // Printerlar
+            const print = $('#technics_printerlar');
             print.empty();
 
-            if(!data.printerlar || data.printerlar.length === 0){
+            if (!data.printerlar.length) {
                 print.append('<tr><td colspan="4" class="text-center">Ma’lumot topilmadi</td></tr>');
             } else {
-                $.each(data.printerlar, function(i, item){
+                data.printerlar.forEach((item) => {
                     print.append(`
                         <tr>
                             <th>${item.num}</th>
@@ -290,79 +358,16 @@ $(document).ready(function(){
     });
 }
 
-    // 🔁 Selectlar o‘zgarganda texnikalarni yangilash
-    $('#organization').change(function(){
-        loadDepartments($(this).val());
-        // loadTechnics() chaqirish loadDepartments ichida bo‘lyapti
-    });
-
-    $('#department').change(function(){
-        loadPositions($(this).val());
-        // loadTechnics() loadPositions ichida bo‘lyapti
-    });
-
-    $('#position').change(function(){
-        loadTechnics();
-    });
-
-    // Oldindan tanlangan qiymatlar bo‘lsa (POSTdan qaytganda)
-    var initialOrg = '{{ selected_org|default_if_none:"" }}';
-    var initialDep = '{{ selected_dep|default_if_none:"" }}';
-    var initialPos = '{{ selected_pos|default_if_none:"" }}';
-
-    if(initialOrg){
-        $('#organization').val(initialOrg);
-        loadDepartments(initialOrg, initialDep);
-        if(initialDep){
-            loadPositions(initialDep, initialPos);
-        }
-        // Sahifa yuklanganda ham jadvalni yuklaymiz
-        loadTechnics();
-    } else {
-        // Hech narsa tanlanmagan bo‘lsa, jadvalni tozalab qo‘yish
-        loadTechnics();
-    }
-
+// select o‘zgarsa
+$('#organization, #department, #directorate, #division').on('change', function () {
+    loadTechnics();
 });
 
-
-function updateSelektText() {
-
-    let val = '';
-    let org = $('#organization option:selected').text().trim();
-    let dep = $('#department option:selected').text().trim();
-    let pos = $('#position option:selected').text().trim();
-
-    if ($('#position').val()) val = pos;
-    else if ($('#department').val()) val = dep;
-    else if ($('#organization').val()) val = org;
-    else val = "Davlat byudjeti siyosati departamenti";
-
-    if (val === "" || val === "Tanlang...") {
-        val = "Davlat byudjeti siyosati departamenti";
-    }
-
-    $('#selekt_id_text').text(val);
-}
-
-$('#organization, #department, #position').on('change', function () {
-    updateSelektText();
+// sahifa yuklanganda
+$(document).ready(function(){
+    loadTechnics();
 });
-
-$(document).ready(function () {
-    updateSelektText();
-});
-
-// Change event
-$('#organization, #department, #position').change(function(){
-    updateSelektText();
-});
-
-// Sahifa yuklanganda oldindan tanlangan qiymat bo‘lsa
-updateSelektText();
 </script>
-
-
 {% endblock content %}
 
 {% block js %}

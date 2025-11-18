@@ -1,6 +1,5 @@
 from django.shortcuts import render,redirect,HttpResponseRedirect,get_object_or_404
 from unicodedata import category
-
 from .models import *
 from django.urls import reverse
 from django.contrib import messages
@@ -80,74 +79,109 @@ def index(request):
 
 
 def technics(request, pk=None):
-    # Category filter
+
+    # 1️⃣ CATEGORY FILTER
     if pk:
         category = get_object_or_404(Category, pk=pk)
-        technics_qs = Technics.objects.filter(category=category, is_active=True)
+        technics_qs = Technics.objects.filter(category=category)
     else:
         category = None
-        technics_qs = Technics.objects.filter(is_active=True)
+        technics_qs = Technics.objects.all()
 
-    # Filters
+    # 2️⃣ FILTER PARAMETRLAR
     org_id = request.GET.get('organization')
     dep_id = request.GET.get('department')
-    pos_id = request.GET.get('position')
+    dir_id = request.GET.get('directorate')
+    div_id = request.GET.get('division')
 
+    # 3️⃣ FILTERLASH
     if org_id:
         technics_qs = technics_qs.filter(employee__organization_id=org_id)
     if dep_id:
         technics_qs = technics_qs.filter(employee__department_id=dep_id)
-    if pos_id:
-        technics_qs = technics_qs.filter(employee__position_id=pos_id)
+    if dir_id:
+        technics_qs = technics_qs.filter(employee__directorate_id=dir_id)
+    if div_id:
+        technics_qs = technics_qs.filter(employee__division_id=div_id)
 
-    # Umumiy son (sarlavha uchun)
+    # 4️⃣ TEXNIKALAR SONI
     total_count = technics_qs.count()
 
-    # Xodim bo‘yicha guruhlash (bitta satrda ko‘rsatish uchun)
+    # 5️⃣ XODIM BO‘YICHA GURUHLASH
     grouped = defaultdict(list)
-    for t in technics_qs.select_related('employee', 'category').order_by('employee__full_name', 'category__name', 'name'):
+    for t in technics_qs.select_related('employee', 'category').order_by(
+        'employee__full_name', 'category__name', 'name'
+    ):
         grouped[t.employee].append(t)
 
+    # 6️⃣ CONTEXT TAYYORLASH
     context = {
         'category': category,
-        'grouped_technics': grouped.items(),   # <— template aynan shuni o‘qiydi
-        'total_count': total_count,            # <— sarlavhada ishlatamiz
-        'organizations': Organization.objects.filter(is_active=True),
-        'departments': Department.objects.filter(is_active=True),
-        'positions': Position.objects.filter(is_active=True),
+        'grouped_technics': grouped.items(),
+        'total_count': total_count,
+
+        # Filter selectlar uchun
+        'organizations': Organization.objects.all(),
+        'departments': Department.objects.all(),
+        'directorate': Directorate.objects.all(),
+        'division': Division.objects.all(),
+
+        # Selected qiymatlar
         'selected_org': org_id,
         'selected_dep': dep_id,
-        'selected_pos': pos_id,
+        'selected_dir': dir_id,
+        'selected_div': div_id,  # ✅ TUZATILGAN
     }
+
     return render(request, 'main/technics.html', context)
 
 
 def ajax_load_departments(request):
     org_id = request.GET.get('organization')
 
-    if not org_id or org_id == "None" or org_id == "":
+    if not org_id or org_id == "None":
         return JsonResponse([], safe=False)
 
     departments = Department.objects.filter(
-        organization_id=org_id, is_active=True
+        organization_id=org_id,
+        is_active=True
     ).values('id', 'name')
+
     return JsonResponse(list(departments), safe=False)
 
 
-def ajax_load_positions(request):
+def ajax_load_directorate(request):
     dep_id = request.GET.get('department')
 
-    if not dep_id or dep_id == "None" or dep_id == "":
+    if not dep_id or dep_id == "None":
         return JsonResponse([], safe=False)
 
-    positions = Position.objects.filter(
-        department_id=dep_id, is_active=True
+    directorate = Directorate.objects.filter(
+        department_id=dep_id,
+        is_active=True
     ).values('id', 'name')
-    return JsonResponse(list(positions), safe=False)
+
+    return JsonResponse(list(directorate), safe=False)
+
+
+def ajax_load_division(request):
+    dir_id = request.GET.get('directorate')
+
+    if not dir_id or dir_id == "None":
+        return JsonResponse([], safe=False)
+
+    division = Division.objects.filter(
+        directorate_id=dir_id,
+        is_active=True
+    ).values('id', 'name')
+
+    return JsonResponse(list(division), safe=False)
+
+
 
 
 def organization(request, pk):
-    organization = (
+    organizations = (
         Organization.objects
         .annotate(
             technics_count=Count('employee__technics', distinct=True)
@@ -158,31 +192,41 @@ def organization(request, pk):
         .get(pk=pk)
     )
 
-    positions_qs = (
-        Position.objects
+    departments = (
+        Department.objects
+        .filter(organization_id=pk)
         .annotate(
             technics_count=Count('employee__technics', distinct=True)
         )
         .prefetch_related('employee_set__technics_set')
     )
 
-    departments = (
-        Department.objects
-        .filter(organization=organization)
+    directorates = (
+        Directorate.objects
+        .filter(department__organization_id=pk)
         .annotate(
-            technics_count=Count('employee__technics', distinct=True),
+            technics_count=Count('employee__technics', distinct=True)
         )
-        .prefetch_related(
-            Prefetch('position_set', queryset=positions_qs),
-            'employee_set__technics_set',
+        .prefetch_related('employee_set__technics_set')
+    )
+
+    divisions = (
+        Division.objects
+        .filter(directorate__department__organization_id=pk)
+        .annotate(
+            technics_count=Count('employee__technics', distinct=True)
         )
+        .prefetch_related('employee_set__technics_set')
     )
 
     context = {
-        'organization': organization,
+        'organizations': organizations,
         'departments': departments,
+        'directorates': directorates,
+        'divisions': divisions,
     }
     return render(request, 'main/organization.html', context)
+
 
 
 def replace_text_in_textboxes(element, replacements):
@@ -201,14 +245,15 @@ def replace_text_in_textboxes(element, replacements):
 def get_technics_count(request):
     org_id = request.GET.get('org_id')
     dep_id = request.GET.get('dep_id')
-    pos_id = request.GET.get('pos_id')
+    dir_id = request.GET.get('dir_id')
+    div_id = request.GET.get('div_id')
 
     # Asosiy querysetlar (QuerySet sifatida qoldiramiz)
     kompyuterlar = Technics.objects.filter(
-        category__name__in=['Kompyuter', 'Monitor', 'Planshet']
+        category__name__in=['Kompyuter', 'Planshet', 'Noutbook', 'Doska']
     )
     printerlar = Technics.objects.filter(
-        category__name='Printer'
+        category__name__in=['A4 Printer', 'A3 Printer', 'scaner']
     )
 
     # Filtrlar to‘g‘ri qo‘llash
@@ -220,9 +265,13 @@ def get_technics_count(request):
         kompyuterlar = kompyuterlar.filter(employee__department_id=dep_id)
         printerlar = printerlar.filter(employee__department_id=dep_id)
 
-    if pos_id:
-        kompyuterlar = kompyuterlar.filter(employee__position_id=pos_id)
-        printerlar = printerlar.filter(employee__position_id=pos_id)
+    if dir_id:
+        kompyuterlar = kompyuterlar.filter(employee__directorate_id=dir_id)
+        printerlar = printerlar.filter(employee__directorate_id=dir_id)
+
+    if div_id:
+        kompyuterlar = kompyuterlar.filter(employee__division_id=div_id)
+        printerlar = printerlar.filter(employee__division_id=div_id)
 
     # JSON uchun faqat sonlar qaytaramiz
     return JsonResponse({
@@ -235,10 +284,10 @@ def get_technics_count(request):
 def document_get(request):
     """GET so‘rovi uchun sahifani ko‘rsatish"""
     context = {
-        'departments': Department.objects.filter(is_active=True),
-        'positions': Position.objects.filter(is_active=True),
-        'categorys': Category.objects.filter(is_active=True),
-        'organizations': Organization.objects.filter(is_active=True),
+        'divisions': Division.objects.all(),
+        'directorates': Directorate.objects.all(),
+        'departments': Department.objects.all(),
+        'organizations': Organization.objects.all(),
     }
     return render(request, 'main/document.html', context)
 
@@ -255,17 +304,19 @@ def document_post(request):
 
     org_id = request.POST.get('organization')
     dep_id = request.POST.get('department')
-    pos_id = request.POST.get('position')
+    dir_id = request.POST.get('directorate')
+    div_id = request.POST.get('division')
     post_id = request.POST.get('post_id')
     fio_id = request.POST.get('fio_id')
     date_id = request.POST.get('date_id')
     namber_id = request.POST.get('namber_id')
     rim_id = request.POST.get('rim_id')
 
-    # 🔍 Model obyektlarini xavfsiz olish
+    # MODEL OBYEKTLARNI OLISH (bo‘sh bo‘lsa None bo‘ladi)
     org = Organization.objects.filter(id=org_id).first() if org_id else None
     dep = Department.objects.filter(id=dep_id).first() if dep_id else None
-    pos = Position.objects.filter(id=pos_id).first() if pos_id else None
+    dir = Directorate.objects.filter(id=dir_id).first() if dir_id else None
+    div = Division.objects.filter(id=div_id).first() if div_id else None
 
     # 📅 Sanani formatlash
     formatted_date = ''
@@ -274,39 +325,50 @@ def document_post(request):
             dt = datetime.strptime(date_id.strip(), "%Y-%m-%d").date()
             oy_nomi = oylar[dt.month - 1]
             formatted_date = f"{dt.year} yil {dt.day}-{oy_nomi}"
-        except (ValueError, TypeError):
+        except:
             formatted_date = str(date_id)
 
-    # ✅ Qaysi obyekt tanlanganini aniqlash
+    # ---------- TEXNIKA SANASH QISMI (TUZATILGAN) ----------
+    komp_qs = Technics.objects.filter(
+        category__name__in=['Kompyuter', 'Planshet', 'Noutbook', 'Doska']
+    )
+    prin_qs = Technics.objects.filter(
+        category__name__in=['A4 Printer', 'A3 Printer', 'scaner']
+    )
 
+    # Eng past darajada tanlangan obyekt
     full_name = None
-    komp_count = 0
-    prin_count = 0
-    if org:
-        full_name = org
-        komp_count = Technics.objects.filter(employee__organization=org, category__name__in=['Kompyuter', 'Monitor', 'Planshet']).count()
-        prin_count = Technics.objects.filter(employee__organization=org, category__name='Printer').count()
-    if dep:
+
+    if div:
+        full_name = div
+        komp_count = komp_qs.filter(employee__division=div).count()
+        prin_count = prin_qs.filter(employee__division=div).count()
+
+    elif dir:
+        full_name = dir
+        komp_count = komp_qs.filter(employee__directorate=dir).count()
+        prin_count = prin_qs.filter(employee__directorate=dir).count()
+
+    elif dep:
         full_name = dep
-        komp_count = Technics.objects.filter(employee__department=dep, category__name__in=['Kompyuter', 'Monitor', 'Planshet']).count()
-        prin_count = Technics.objects.filter(employee__department=dep, category__name='Printer').count()
-    if pos:
-        full_name = pos
-        komp_count = Technics.objects.filter(employee__position=pos, category__name__in=['Kompyuter', 'Monitor', 'Planshet']).count()
-        prin_count = Technics.objects.filter(employee__position=pos, category__name='Printer').count()
+        komp_count = komp_qs.filter(employee__department=dep).count()
+        prin_count = prin_qs.filter(employee__department=dep).count()
 
-    if not full_name:
-        return HttpResponse("Tashkilot / bo‘lim / lavozim tanlanmagan!", status=400)
+    elif org:
+        full_name = org
+        komp_count = komp_qs.filter(employee__organization=org).count()
+        prin_count = prin_qs.filter(employee__organization=org).count()
 
+    else:
+        return HttpResponse("Tashkilot / bo‘lim tanlanmagan!", status=400)
 
-    # 📂 Shablonni tekshirish
+    # ---------- DOC SHABLONINI O'ZGARTIRISH ----------
     template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma1.docx')
     if not os.path.exists(template_path):
         return HttpResponse("Shablon fayl topilmadi!", status=404)
 
     doc = Document(template_path)
 
-    # 🔁 O‘rniga qo‘yiladigan qiymatlar
     replacements = {
         'DEPARTMENT': full_name.name,
         'POST': post_id or '',
@@ -314,14 +376,14 @@ def document_post(request):
         'DATA': formatted_date or '',
         'NAMBER': namber_id or '',
         'RIM': rim_id or '',
-        'STYLE': full_name.name or '',
-        'KOMPCOUNT': str(komp_count) or '',
-        'PRINCOUNT': str(prin_count) or '',
+        'STYLE': full_name.name,
+        'KOMPCOUNT': str(komp_count),
+        'PRINCOUNT': str(prin_count),
     }
 
-    # ✍️ Oddiy matnni almashtirish
-    for paragraph in doc.paragraphs:
-        for run in paragraph.runs:
+    # Matn almashtirish
+    for p in doc.paragraphs:
+        for run in p.runs:
             for old, new in replacements.items():
                 if old in run.text:
                     run.text = run.text.replace(old, new)
@@ -330,32 +392,30 @@ def document_post(request):
                     if old in ['STYLE', 'FIO', 'DATA', 'NAMBER', 'KOMPCOUNT', 'PRINCOUNT']:
                         run.font.bold = True
 
-    # 🔄 Text box (shape) ichidagi matnni almashtirish
+    # Text boxlarni ham yangilash
     replace_text_in_textboxes(doc.element.body, replacements)
 
-    # 📄 Faylni qaytarish
-    response = HttpResponse(
-        content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-    )
+    # Faylni qaytarish
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
     response['Content-Disposition'] = 'attachment; filename="dalolatnoma_yangi.docx"'
     doc.save(response)
     return response
 
 
 def ajax_load_technics(request):
-    org_id = request.GET.get('organization')
-    dep_id = request.GET.get('department')
-    pos_id = request.GET.get('position')
+    org_id = request.GET.get('organization') or None
+    dep_id = request.GET.get('department') or None
+    dir_id = request.GET.get('directorate') or None
+    div_id = request.GET.get('division') or None
 
-    # 1) Asosiy querysetlar
+    # Asosiy querysetlar
     kompyuterlar = Technics.objects.filter(
-        category__name__in=['Kompyuter', 'Monitor', 'Planshet']
+        category__name__in=['Kompyuter', 'Planshet', 'Noutbook', 'Doska']
     )
     printerlar = Technics.objects.filter(
-        category__name='Printer'
+        category__name__in=['A4 Printer', 'A3 Printer', 'scaner']
     )
 
-    # 2) Filtrlar
     if org_id:
         kompyuterlar = kompyuterlar.filter(employee__organization_id=org_id)
         printerlar = printerlar.filter(employee__organization_id=org_id)
@@ -364,11 +424,14 @@ def ajax_load_technics(request):
         kompyuterlar = kompyuterlar.filter(employee__department_id=dep_id)
         printerlar = printerlar.filter(employee__department_id=dep_id)
 
-    if pos_id:
-        kompyuterlar = kompyuterlar.filter(employee__position_id=pos_id)
-        printerlar = printerlar.filter(employee__position_id=pos_id)
+    if dir_id:
+        kompyuterlar = kompyuterlar.filter(employee__directorate_id=dir_id)
+        printerlar = printerlar.filter(employee__directorate_id=dir_id)
 
-    # 3) JSON formatga tayyorlash
+    if div_id:
+        kompyuterlar = kompyuterlar.filter(employee__division_id=div_id)
+        printerlar = printerlar.filter(employee__division_id=div_id)
+
     data_komp = []
     for idx, t in enumerate(kompyuterlar, start=1):
         data_komp.append({
@@ -386,7 +449,6 @@ def ajax_load_technics(request):
             "serial": t.serial or "",
         })
 
-    # 4) Ikkita jadval uchun JSON qaytariladi
     return JsonResponse({
         "kompyuterlar": data_komp,
         "printerlar": data_printer,
@@ -395,13 +457,11 @@ def ajax_load_technics(request):
 
 def hisobot_get(request):
     """GET so‘rovi uchun sahifani ko‘rsatish"""
-    technics = Technics.objects.filter(is_active=True)
     context = {
-        'technics': technics,
-        'departments': Department.objects.filter(is_active=True),
-        'positions': Position.objects.filter(is_active=True),
-        'categorys': Category.objects.filter(is_active=True),
-        'organizations': Organization.objects.filter(is_active=True),
+        'divisions': Division.objects.all(),
+        'directorates': Directorate.objects.all(),
+        'departments': Department.objects.all(),
+        'organizations': Organization.objects.all(),
     }
     return render(request, 'main/hisobot.html', context)
 
