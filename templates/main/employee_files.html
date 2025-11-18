@@ -1,0 +1,56 @@
+{% if deeds %}
+<table class="table table-bordered">
+    <thead class="table-light">
+        <tr>
+            <th style="width:40px;">#</th>
+            <th>Yuboruvchi</th>
+            <th>Izoh</th>
+            <th>Holati</th>
+            <th>Fayl</th>
+            <th>Sana</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for d in deeds %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+
+            <td>
+                {{ d.sender.user.get_full_name }}
+                <br>
+                <small class="text-muted">{{ d.sender.rank }}</small>
+            </td>
+
+            <td>{{ d.message|default:"-" }}</td>
+
+            <td>
+                {% if d.status == 'approved' %}
+                    <span class="badge bg-success">Tasdiqlandi</span>
+                {% elif d.status == 'rejected' %}
+                    <span class="badge bg-danger">Rad etildi</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Kutulmoqda</span>
+                {% endif %}
+            </td>
+
+            <td>
+                {% if d.file %}
+                    <a href="{{ d.file.url }}" class="btn btn-sm btn-primary" download>
+                        Yuklab olish
+                    </a>
+                {% else %}
+                    -
+                {% endif %}
+            </td>
+
+            <td>{{ d.date_creat }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% else %}
+<div class="alert alert-info">
+    Ushbu xodimga hali hech qanday dalolatnoma yuborilmagan.
+</div>
+{% endif %}

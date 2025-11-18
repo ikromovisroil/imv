@@ -1,0 +1,148 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+<title>Profile</title>
+{% endblock %}
+
+{% block css %}
+<style>
+.employee-item {
+    cursor: pointer;
+}
+
+.employee-item.active {
+    background-color: #28a745 !important;
+    color: white !important;
+    font-weight: bold;
+}
+</style>
+{% endblock css %}
+
+{% block content %}
+<main id="main" class="main">
+
+    <div class="pagetitle">
+      <h1>Profile</h1>
+    </div>
+
+    <section class="section profile">
+      <div class="row">
+
+        <!-- LEFT: XODIMLAR RO‘YXATI -->
+        <div class="col-xl-4">
+          <div class="card">
+            <div class="card-body">
+
+                <h5 class="card-title">Xodimlar</h5>
+
+                <div class="list-group">
+                    {% for emp in employee %}
+                        <a href="#"
+                           class="list-group-item list-group-item-action employee-item"
+                           data-id="{{emp.id}}"
+                           data-name="{{ emp.user.get_full_name }}">
+                            {{ emp.rank }} — {{ emp.user.get_full_name }}
+                        </a>
+                    {% endfor %}
+                </div>
+
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: TAB CONTENT -->
+        <div class="col-xl-8">
+          <div class="card">
+            <div class="card-body pt-3">
+
+              <ul class="nav nav-tabs nav-tabs-bordered">
+                <li class="nav-item">
+                  <button class="nav-link active" data-bs-toggle="tab"
+                          data-bs-target="#profile-overview">Arizalar</button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link" data-bs-toggle="tab"
+                          data-bs-target="#profile-send">Yuborish</button>
+                </li>
+              </ul>
+
+              <div class="tab-content pt-2">
+
+                <!-- TAB 1 -->
+                <div class="tab-pane fade show active pt-3" id="profile-overview">
+                    <div id="result-block">
+                        <p class="text-muted">Xodimni tanlang...</p>
+                    </div>
+                </div>
+
+                <!-- TAB 2 -->
+                <div class="tab-pane fade pt-3" id="profile-send">
+
+                  <form action="{% url 'deed_post' %}" method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+
+                    <div class="row mb-3">
+                      <label class="col-md-4 col-lg-3 col-form-label">File</label>
+                      <div class="col-md-8 col-lg-9">
+                        <input class="form-control" type="file" name="file">
+                      </div>
+                    </div>
+
+                    <div class="row mb-3">
+                      <label class="col-md-4 col-lg-3 col-form-label">Comment</label>
+                      <div class="col-md-8 col-lg-9">
+                        <input name="message" type="text" class="form-control">
+                      </div>
+                    </div>
+
+                    <div class="row mb-3">
+                      <label class="col-md-4 col-lg-3 col-form-label">Qabul qiluvchi</label>
+                      <div class="col-md-8 col-lg-9">
+                        <input type="text" id="receiver" class="form-control" disabled>
+                        <input type="hidden" id="receiver_id" name="receiver_id">
+                      </div>
+                    </div>
+
+                    <div class="text-center">
+                      <button type="submit" class="btn btn-primary">Yuborish</button>
+                    </div>
+                  </form>
+
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+</main>
+
+
+
+<!-- JAVASCRIPT -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const items = document.querySelectorAll(".employee-item");
+
+    items.forEach(item => {
+        item.addEventListener("click", function (e) {
+            e.preventDefault();
+
+            items.forEach(i => i.classList.remove("active"));
+            this.classList.add("active");
+
+            document.getElementById("receiver").value = this.dataset.name;
+            document.getElementById("receiver_id").value = this.dataset.id;
+        });
+    });
+});
+</script>
+
+
+
+{% endblock content %}

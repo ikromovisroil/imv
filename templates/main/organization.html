@@ -48,7 +48,13 @@
                                     {% if forloop.first %}
                                         <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
                                         <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
-                                        <td rowspan="{{ techs.count }}">{{ emp.full_name }}</td>
+                                        <td rowspan="{{ techs.count }}">
+                                            {% if emp.user %}
+                                                {{ emp.user.get_full_name }}
+                                            {% else %}
+                                                <span class="text-muted">— Ro‘yxatdan o‘tmagan —</span>
+                                            {% endif %}
+                                        </td>
                                     {% endif %}
                                     <td>{{ tech.category }} ({{ tech.name }})</td>
                                     <td>{{ tech.inventory }}</td>
@@ -106,7 +112,13 @@
                                                 {% if forloop.first %}
                                                     <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
                                                     <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
-                                                    <td rowspan="{{ techs.count }}">{{ emp.full_name }}</td>
+                                                    <td rowspan="{{ techs.count }}">
+                                                        {% if emp.user %}
+                                                            {{ emp.user.get_full_name }}
+                                                        {% else %}
+                                                            <span class="text-muted">— Ro‘yxatdan o‘tmagan —</span>
+                                                        {% endif %}
+                                                    </td>
                                                 {% endif %}
                                                 <td>{{ tech.category }} ({{ tech.name }})</td>
                                                 <td>{{ tech.inventory }}</td>
@@ -165,7 +177,13 @@
                                                         {% if forloop.first %}
                                                             <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
                                                             <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
-                                                            <td rowspan="{{ techs.count }}">{{ emp.full_name }}</td>
+                                                            <td rowspan="{{ techs.count }}">
+                                                                {% if emp.user %}
+                                                                    {{ emp.user.get_full_name }}
+                                                                {% else %}
+                                                                    <span class="text-muted">— Ro‘yxatdan o‘tmagan —</span>
+                                                                {% endif %}
+                                                            </td>
                                                         {% endif %}
                                                         <td>{{ tech.category }} ({{ tech.name }})</td>
                                                         <td>{{ tech.inventory }}</td>

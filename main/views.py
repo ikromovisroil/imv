@@ -22,7 +22,8 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.admin.models import LogEntry
 from django.contrib.contenttypes.models import ContentType
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
-
+from django.template.loader import render_to_string
+from django.http import JsonResponse
 
 def global_data(request):
     return {
@@ -31,6 +32,54 @@ def global_data(request):
     }
 
 
+@login_required
+def profil(request):
+    context = {
+        'employee': Employee.objects.all()
+    }
+    return render(request, 'main/profil.html', context)
+
+
+@login_required
+def get_employee_files(request):
+    emp_id = request.GET.get("employee_id")
+
+    deeds = Deed.objects.filter(receiver_id=emp_id).select_related(
+        "sender", "receiver"
+    ).order_by("-id")
+
+    html = render_to_string("main/employee_files.html", {"deeds": deeds})
+    return JsonResponse({"html": html})
+
+
+@login_required
+def deed_post(request):
+    file = request.FILES.get('file')
+    message = request.POST.get('message')
+    receiver_id = request.POST.get("receiver_id")
+
+    receiver = Employee.objects.filter(id=receiver_id).first()
+    sender = Employee.objects.filter(user=request.user).first()
+
+    if not sender:
+        return HttpResponse("Sender topilmadi", status=400)
+
+    if not receiver:
+        return HttpResponse("Receiver topilmadi", status=400)
+
+    Deed.objects.create(
+        sender=sender,
+        receiver=receiver,
+        file=file,
+        message=message,
+        status="viewed"
+    )
+
+    messages.success(request, "Dalolatnoma yuborildi!")
+    return redirect("profil")
+
+
+@login_required
 def index(request):
     organizations = Organization.objects.all()
     categorys = Category.objects.all()
@@ -78,6 +127,7 @@ def index(request):
     return render(request, "main/index.html", context)
 
 
+@login_required
 def technics(request, pk=None):
 
     # 1️⃣ CATEGORY FILTER
@@ -109,8 +159,11 @@ def technics(request, pk=None):
 
     # 5️⃣ XODIM BO‘YICHA GURUHLASH
     grouped = defaultdict(list)
-    for t in technics_qs.select_related('employee', 'category').order_by(
-        'employee__full_name', 'category__name', 'name'
+    for t in technics_qs.select_related('employee', 'employee__user', 'category').order_by(
+            'employee__user__last_name',
+            'employee__user__first_name',
+            'category__name',
+            'name',
     ):
         grouped[t.employee].append(t)
 
@@ -136,6 +189,7 @@ def technics(request, pk=None):
     return render(request, 'main/technics.html', context)
 
 
+@login_required
 def ajax_load_departments(request):
     org_id = request.GET.get('organization')
 
@@ -150,6 +204,7 @@ def ajax_load_departments(request):
     return JsonResponse(list(departments), safe=False)
 
 
+@login_required
 def ajax_load_directorate(request):
     dep_id = request.GET.get('department')
 
@@ -164,6 +219,7 @@ def ajax_load_directorate(request):
     return JsonResponse(list(directorate), safe=False)
 
 
+@login_required
 def ajax_load_division(request):
     dir_id = request.GET.get('directorate')
 
@@ -178,6 +234,7 @@ def ajax_load_division(request):
     return JsonResponse(list(division), safe=False)
 
 
+@login_required
 def organization(request, pk):
     organizations = (
         Organization.objects
@@ -226,6 +283,7 @@ def organization(request, pk):
     return render(request, 'main/organization.html', context)
 
 
+@login_required
 def replace_text_in_textboxes(element, replacements):
     """
     DOCX fayldagi barcha text box (shape) ichidagi matnlarni almashtiradi.
@@ -239,6 +297,7 @@ def replace_text_in_textboxes(element, replacements):
                         child.text = text.replace(old, new)
 
 
+@login_required
 def get_technics_count(request):
     org_id = request.GET.get('org_id')
     dep_id = request.GET.get('dep_id')
@@ -277,6 +336,7 @@ def get_technics_count(request):
     })
 
 
+@login_required
 def document_get(request):
     """GET so‘rovi uchun sahifani ko‘rsatish"""
     context = {
@@ -288,6 +348,7 @@ def document_get(request):
     return render(request, 'main/document.html', context)
 
 
+@login_required
 def document_post(request):
     """POST so‘rovi uchun dalolatnoma yaratish"""
     oylar = [
@@ -398,6 +459,7 @@ def document_post(request):
     return response
 
 
+@login_required
 def ajax_load_technics(request):
     org_id = request.GET.get('organization') or None
     dep_id = request.GET.get('department') or None
@@ -451,6 +513,7 @@ def ajax_load_technics(request):
     })
 
 
+@login_required
 def hisobot_get(request):
     """GET so‘rovi uchun sahifani ko‘rsatish"""
     context = {
@@ -462,6 +525,7 @@ def hisobot_get(request):
     return render(request, 'main/hisobot.html', context)
 
 
+@login_required
 def set_table_borders(table):
     tbl = table._tbl
 
@@ -490,6 +554,7 @@ def set_table_borders(table):
         element.set(qn('w:space'), '0')
 
 
+@login_required
 def set_cell_border(cell, **kwargs):
     """Word jadval hujayrasi atrofida chiziq (border) chizish uchun."""
     tc = cell._tc
@@ -505,6 +570,7 @@ def set_cell_border(cell, **kwargs):
             tcPr.append(element)
 
 
+@login_required
 def set_cell_text(cell, text, bold=False, center=False, size=11):
     cell.text = text or ''
     for p in cell.paragraphs:
@@ -515,6 +581,7 @@ def set_cell_text(cell, text, bold=False, center=False, size=11):
             run.bold = bold
 
 
+@login_required
 def create_table(doc, title, data, headers):
     """
     Jadvalni widths bo‘yicha yaratadi.
@@ -602,6 +669,7 @@ def create_table(doc, title, data, headers):
     return heading, table
 
 
+@login_required
 def hisobot_post(request):
     if request.method != 'POST':
         return redirect('hisobot_get')

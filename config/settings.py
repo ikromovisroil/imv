@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'main',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -60,6 +61,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+# CSRF_TRUSTED_ORIGINS = [
+#     'https://canteen.uz',
+# ]
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -129,7 +133,6 @@ MEDIA_ROOT = str(BASE_DIR.joinpath('media'))
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# LOGIN_URL = 'login'
-# LOGOUT_URL = 'logout'
-# LOGIN_REDIRECT_URL = 'profil'
-# LOGOUT_REDIRECT_URL = 'login'
+LOGIN_URL = 'login'      # login sahifasi
+LOGIN_REDIRECT_URL = 'index'  # login bo‘lgach qayerga o'tadi
+LOGOUT_REDIRECT_URL = 'login'
