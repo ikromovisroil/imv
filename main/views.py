@@ -178,8 +178,6 @@ def ajax_load_division(request):
     return JsonResponse(list(division), safe=False)
 
 
-
-
 def organization(request, pk):
     organizations = (
         Organization.objects
@@ -226,7 +224,6 @@ def organization(request, pk):
         'divisions': divisions,
     }
     return render(request, 'main/organization.html', context)
-
 
 
 def replace_text_in_textboxes(element, replacements):
@@ -278,7 +275,6 @@ def get_technics_count(request):
         "kompyuterlar": kompyuterlar.count(),
         "printerlar": printerlar.count(),
     })
-
 
 
 def document_get(request):
@@ -613,39 +609,43 @@ def hisobot_post(request):
     # tanlanganlar
     org_id = request.POST.get('organization')
     dep_id = request.POST.get('department')
-    pos_id = request.POST.get('position')
+    dir_id = request.POST.get('directorate')
+    div_id = request.POST.get('division')
 
     org = Organization.objects.filter(id=org_id).first() if org_id else None
     dep = Department.objects.filter(id=dep_id).first() if dep_id else None
-    pos = Position.objects.filter(id=pos_id).first() if pos_id else None
+    dir = Directorate.objects.filter(id=dir_id).first() if dir_id else None
+    div = Division.objects.filter(id=div_id).first() if div_id else None
 
     # --- Texnikalar ---
     kompyuterlar = Technics.objects.filter(
-        category__name__in=['Kompyuter', 'Monitor', 'Planshet']
+        category__name__in=['Kompyuter', 'Planshet', 'Noutbook', 'Doska']
     )
-
     printerlar = Technics.objects.filter(
-        category__name='Printer'
+        category__name__in=['A4 Printer', 'A3 Printer', 'scaner']
     )
 
     full_name = None
-
     # *** FILTRLARNI TO‘G‘RI QO‘YISH ***
     if org:
-        kompyuterlar = kompyuterlar.filter(employee__organization=org)
-        printerlar = printerlar.filter(employee__organization=org)
+        kompyuterlar = kompyuterlar.filter(employee__organization_id=org_id)
+        printerlar = printerlar.filter(employee__organization_id=org_id)
         full_name = org
 
     if dep:
-        kompyuterlar = kompyuterlar.filter(employee__department=dep)
-        printerlar = printerlar.filter(employee__department=dep)
+        kompyuterlar = kompyuterlar.filter(employee__department_id=dep_id)
+        printerlar = printerlar.filter(employee__department_id=dep_id)
         full_name = dep
 
-    if pos:
-        kompyuterlar = kompyuterlar.filter(employee__position=pos)
-        printerlar = printerlar.filter(employee__position=pos)
-        full_name = pos
+    if dir:
+        kompyuterlar = kompyuterlar.filter(employee__directorate_id=dir_id)
+        printerlar = printerlar.filter(employee__directorate_id=dir_id)
+        full_name = dir
 
+    if div:
+        kompyuterlar = kompyuterlar.filter(employee__division_id=div_id)
+        printerlar = printerlar.filter(employee__division_id=div_id)
+        full_name = div
 
     # --- DOCX TEMPLATE ---
     template_path = os.path.join(settings.MEDIA_ROOT, 'document', 'dalolatnoma2.docx')
