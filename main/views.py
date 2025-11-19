@@ -24,6 +24,8 @@ from django.contrib.contenttypes.models import ContentType
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
 from django.template.loader import render_to_string
 from django.http import JsonResponse
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
 
 def global_data(request):
     return {
@@ -33,11 +35,11 @@ def global_data(request):
 
 
 @login_required
-def profil(request):
+def contact(request):
     context = {
         'employee': Employee.objects.all()
     }
-    return render(request, 'main/profil.html', context)
+    return render(request, 'main/contact.html', context)
 
 
 @login_required
@@ -57,7 +59,6 @@ def deed_post(request):
     file = request.FILES.get('file')
     message = request.POST.get('message')
     receiver_id = request.POST.get("receiver_id")
-
     receiver = Employee.objects.filter(id=receiver_id).first()
     sender = Employee.objects.filter(user=request.user).first()
 
@@ -67,15 +68,31 @@ def deed_post(request):
     if not receiver:
         return HttpResponse("Receiver topilmadi", status=400)
 
+    # --------- 📌 FAYLGA SANA QO‘SHISH -------------
+    saved_file = None
+    if file:
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        name, ext = os.path.splitext(file.name)
+        # Yangi nom: nomi_2025-02-26.docx
+        new_name = f"{name}_{today}{ext}"
+
+        saved_path = default_storage.save(
+            f"deed/{new_name}",
+            ContentFile(file.read())
+        )
+
+        saved_file = saved_path  # modelga saqlanadigan joy
+
+    # --------- 📌 MODELGA SAQLASH -------------
     Deed.objects.create(
         sender=sender,
         receiver=receiver,
-        file=file,
+        file=saved_file,     # ❗ MUHIM: yangi fayl
         message=message,
         status="viewed"
     )
 
-    messages.success(request, "Dalolatnoma yuborildi!")
     return redirect("profil")
 
 

@@ -10,7 +10,6 @@
 .employee-item {
     cursor: pointer;
 }
-
 .employee-item.active {
     background-color: #28a745 !important;
     color: white !important;
@@ -122,8 +121,6 @@
 
 </main>
 
-
-
 <!-- JAVASCRIPT -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -136,13 +133,24 @@ document.addEventListener("DOMContentLoaded", function () {
             items.forEach(i => i.classList.remove("active"));
             this.classList.add("active");
 
-            document.getElementById("receiver").value = this.dataset.name;
-            document.getElementById("receiver_id").value = this.dataset.id;
+            let empId = this.dataset.id;
+            let empName = this.dataset.name;
+
+            document.getElementById("receiver").value = empName;
+            document.getElementById("receiver_id").value = empId;
+
+            // AJAX - to'g'ri URL
+            fetch("{% url 'get_employee_files' %}" + `?employee_id=${empId}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("result-block").innerHTML = data.html;
+                })
+                .catch(error => {
+                    console.log("Xatolik:", error);
+                });
         });
     });
 });
 </script>
-
-
 
 {% endblock content %}
