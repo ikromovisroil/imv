@@ -2,27 +2,18 @@
 {% load static %}
 
 {% block title %}
-<title>Profile</title>
+<title>Arizalar</title>
 {% endblock %}
 
 {% block css %}
-<style>
-.employee-item {
-    cursor: pointer;
-}
-.employee-item.active {
-    background-color: #28a745 !important;
-    color: white !important;
-    font-weight: bold;
-}
-</style>
+
 {% endblock css %}
 
 {% block content %}
 <main id="main" class="main">
 
     <div class="pagetitle">
-      <h1>Profile</h1>
+      <h1>Arizalar</h1>
     </div>
 
     <section class="section profile">
@@ -31,21 +22,20 @@
         <!-- LEFT: XODIMLAR RO‘YXATI -->
         <div class="col-xl-4">
           <div class="card">
-            <div class="card-body">
-
-                <h5 class="card-title">Xodimlar</h5>
-
-                <div class="list-group">
+            <div class="alert fade show" role="alert">
+            <input type="text" id="searchEmployee" class="form-control" placeholder="Xodim qidirish...">
+        </div>
+            <div class="card-body" style="overflow: auto; height: 700px;">
+                <div class="list-group employee-scroll" id="employeeList">
                     {% for emp in employee %}
-                        <a href="#"
-                           class="list-group-item list-group-item-action employee-item"
-                           data-id="{{emp.id}}"
-                           data-name="{{ emp.user.get_full_name }}">
-                            {{ emp.rank }} — {{ emp.user.get_full_name }}
-                        </a>
+                        <div id="employee_{{ emp.id }}"
+                             class="employee-item alert alert-secondary alert-dismissible fade show"
+                             data-id="{{emp.id}}"
+                             data-name="{{ emp.user.get_full_name }}">
+                             {{ emp.rank }} — {{ emp.user.get_full_name }}
+                        </div>
                     {% endfor %}
                 </div>
-
             </div>
           </div>
         </div>
@@ -124,33 +114,58 @@
 <!-- JAVASCRIPT -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+
+    const searchInput = document.getElementById("searchEmployee");
+    const employees = document.querySelectorAll(".employee-item");
+
+    searchInput.addEventListener("keyup", function () {
+        let value = this.value.toLowerCase().trim();
+
+        employees.forEach(item => {
+            let name = item.dataset.name.toLowerCase();
+
+            if (name.includes(value)) {
+                item.style.display = "block";
+            } else {
+                item.style.display = "none";
+            }
+        });
+    });
+});
+
+document.addEventListener("DOMContentLoaded", function () {
     const items = document.querySelectorAll(".employee-item");
 
     items.forEach(item => {
-        item.addEventListener("click", function (e) {
-            e.preventDefault();
+        item.addEventListener("click", function () {
 
-            items.forEach(i => i.classList.remove("active"));
-            this.classList.add("active");
+            // Barcha itemlarni default rangga qaytaramiz
+            items.forEach(i => {
+                i.classList.remove("alert-primary");
+                i.classList.add("alert-secondary");
+            });
 
+            // Bosilgan elementni ko'k rangga o'tkazamiz
+            this.classList.remove("alert-secondary");
+            this.classList.add("alert-primary");
+
+            // Ma'lumotlarni forma inputlariga yozish
             let empId = this.dataset.id;
             let empName = this.dataset.name;
 
             document.getElementById("receiver").value = empName;
             document.getElementById("receiver_id").value = empId;
 
-            // AJAX - to'g'ri URL
-            fetch("{% url 'get_employee_files' %}" + `?employee_id=${empId}`)
+            // AJAX
+            fetch("{% url 'get_employee_files' %}?employee_id=" + empId)
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById("result-block").innerHTML = data.html;
-                })
-                .catch(error => {
-                    console.log("Xatolik:", error);
                 });
         });
     });
 });
+
 </script>
 
 {% endblock content %}

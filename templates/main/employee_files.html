@@ -13,7 +13,6 @@
         <tr>
             <td>{{ d.date_creat }}</td>
             <td>{{ d.message }}</td>
-
             <td>
                 {% if d.status == 'viewed' %}
                     <span class="badge bg-warning">Kutulmoqda</span>
@@ -23,6 +22,12 @@
                     <span class="badge bg-danger">Rad etildi</span>
                 {% else %}
                     <span class="badge bg-secondary">Noma’lum</span>
+                {% endif %}
+                <!-- 🔥 Asosiy mantiq shu yerda -->
+                {% if d.sender.employee.user == request.user %}
+                    <i class="bi bi-arrow-up-circle-fill"></i>
+                {% else %}
+                    <i class="bi bi-arrow-down-circle-fill"></i>
                 {% endif %}
             </td>
 
