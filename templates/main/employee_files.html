@@ -5,7 +5,7 @@
             <th>Sana</th>
             <th>Izox</th>
             <th>Xolati</th>
-            <th>Fayl</th>
+            <th>Fayllar</th>
         </tr>
     </thead>
     <tbody>
@@ -13,6 +13,7 @@
         <tr>
             <td>{{ d.date_creat }}</td>
             <td>{{ d.message }}</td>
+
             <td>
                 {% if d.status == 'viewed' %}
                     <span class="badge bg-warning">Kutulmoqda</span>
@@ -20,10 +21,9 @@
                     <span class="badge bg-success">Tasdiqlandi</span>
                 {% elif d.status == 'rejected' %}
                     <span class="badge bg-danger">Rad etildi</span>
-                {% else %}
-                    <span class="badge bg-secondary">Noma’lum</span>
                 {% endif %}
-                <!-- 🔥 Asosiy mantiq shu yerda -->
+
+                <!-- O‘zi yuborgan bo‘lsa → tepaga, qabul qilgan bo‘lsa → pastga -->
                 {% if d.sender.employee.user == request.user %}
                     <i class="bi bi-arrow-up-circle-fill"></i>
                 {% else %}
@@ -32,8 +32,10 @@
             </td>
 
             <td>
-                {% if d.file %}
-                    <a href="{{ d.file.url }}" target="_blank">📄 Fayl</a>
+                {% if d.deedfile_set.exists %}
+                    {% for f in d.deedfile_set.all %}
+                        <a href="{{ f.file.url }}" target="_blank">📄 Fayl {{ forloop.counter }}</a>,
+                    {% endfor %}
                 {% else %}
                     —
                 {% endif %}

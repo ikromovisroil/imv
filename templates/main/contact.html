@@ -23,8 +23,8 @@
         <div class="col-xl-4">
           <div class="card">
             <div class="alert fade show" role="alert">
-            <input type="text" id="searchEmployee" class="form-control" placeholder="Xodim qidirish...">
-        </div>
+              <input type="text" id="searchEmployee" class="form-control" placeholder="Xodim qidirish...">
+            </div>
             <div class="card-body" style="overflow: auto; height: 700px;">
                 <div class="list-group employee-scroll" id="employeeList">
                     {% for emp in employee %}
@@ -74,7 +74,7 @@
                     <div class="row mb-3">
                       <label class="col-md-4 col-lg-3 col-form-label">File</label>
                       <div class="col-md-8 col-lg-9">
-                        <input class="form-control" type="file" name="file">
+                        <input class="form-control" type="file" name="file" required multiple>
                       </div>
                     </div>
 
@@ -89,7 +89,7 @@
                       <label class="col-md-4 col-lg-3 col-form-label">Qabul qiluvchi</label>
                       <div class="col-md-8 col-lg-9">
                         <input type="text" id="receiver" class="form-control" disabled>
-                        <input type="hidden" id="receiver_id" name="receiver_id">
+                        <input type="hidden" id="receiver_id" name="receiver_id" required>
                       </div>
                     </div>
 

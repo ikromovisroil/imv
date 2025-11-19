@@ -37,7 +37,7 @@ def global_data(request):
 @login_required
 def contact(request):
     context = {
-        'employee': Employee.objects.all()
+        'employee': Employee.objects.exclude(user=request.user)
     }
     return render(request, 'main/contact.html', context)
 
@@ -56,44 +56,48 @@ def get_employee_files(request):
 
 @login_required
 def deed_post(request):
-    file = request.FILES.get('file')
+    if request.method != "POST":
+        return redirect("contact")
+
     message = request.POST.get('message')
     receiver_id = request.POST.get("receiver_id")
-    receiver = Employee.objects.filter(id=receiver_id).first()
+
     sender = Employee.objects.filter(user=request.user).first()
+    receiver = Employee.objects.filter(id=receiver_id).first()
 
     if not sender:
         return HttpResponse("Sender topilmadi", status=400)
-
     if not receiver:
         return HttpResponse("Receiver topilmadi", status=400)
 
-    # --------- 📌 FAYLGA SANA QO‘SHISH -------------
-    saved_file = None
-    if file:
-        today = datetime.now().strftime("%Y-%m-%d")
-
-        name, ext = os.path.splitext(file.name)
-        # Yangi nom: nomi_2025-02-26.docx
-        new_name = f"{name}_{today}{ext}"
-
-        saved_path = default_storage.save(
-            f"deed/{new_name}",
-            ContentFile(file.read())
-        )
-
-        saved_file = saved_path  # modelga saqlanadigan joy
-
-    # --------- 📌 MODELGA SAQLASH -------------
-    Deed.objects.create(
+    # 1) Deed yaratish
+    deed = Deed.objects.create(
         sender=sender,
         receiver=receiver,
-        file=saved_file,     # ❗ MUHIM: yangi fayl
         message=message,
         status="viewed"
     )
 
-    return redirect("profil")
+    # 2) Fayllarni olish (HTML -> name="file")
+    files = request.FILES.getlist('file')
+
+    for f in files:
+        today = datetime.now().strftime("%Y-%m-%d")
+        name, ext = os.path.splitext(f.name)
+        new_name = f"{name}_{today}{ext}"
+
+        saved_path = default_storage.save(
+            f"deed/{new_name}",
+            ContentFile(f.read())
+        )
+
+        DeedFile.objects.create(
+            deed=deed,
+            file=saved_path
+        )
+
+    return redirect("contact")
+
 
 
 @login_required
@@ -145,11 +149,11 @@ def index(request):
 
 
 @login_required
-def technics(request, pk=None):
+def technics(request, slug=None):
 
     # 1️⃣ CATEGORY FILTER
-    if pk:
-        category = get_object_or_404(Category, pk=pk)
+    if slug:
+        category = get_object_or_404(Category, slug=slug)
         technics_qs = Technics.objects.filter(category=category)
     else:
         category = None
@@ -252,7 +256,7 @@ def ajax_load_division(request):
 
 
 @login_required
-def organization(request, pk):
+def organization(request, slug):
     organizations = (
         Organization.objects
         .annotate(
@@ -261,30 +265,33 @@ def organization(request, pk):
         .prefetch_related(
             'employee_set__technics_set'
         )
-        .get(pk=pk)
+        .get(slug=slug)
     )
 
+    # Department — Organization bilan bog‘liq
     departments = (
         Department.objects
-        .filter(organization_id=pk)
+        .filter(organization__slug=slug)
         .annotate(
             technics_count=Count('employee__technics', distinct=True)
         )
         .prefetch_related('employee_set__technics_set')
     )
 
+    # Directorate — Department orqali Organization bilan bog‘liq
     directorates = (
         Directorate.objects
-        .filter(department__organization_id=pk)
+        .filter(department__organization__slug=slug)
         .annotate(
             technics_count=Count('employee__technics', distinct=True)
         )
         .prefetch_related('employee_set__technics_set')
     )
 
+    # Division — Directorate → Department → Organization orqali bog‘liq
     divisions = (
         Division.objects
-        .filter(directorate__department__organization_id=pk)
+        .filter(directorate__department__organization__slug=slug)
         .annotate(
             technics_count=Count('employee__technics', distinct=True)
         )

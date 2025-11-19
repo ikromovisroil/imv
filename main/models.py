@@ -1,8 +1,41 @@
 from django.contrib.auth.models import User
 from django.db import models
+from django.utils.text import slugify
+from .validators import *
+
+# Slug.
+class AutoSlugMixin(models.Model):
+    slug = models.SlugField(unique=True, blank=True, null=True, max_length=200)
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        # Avaoldan bazadagi eski obyektni olaylik
+        old_slug = None
+        if self.pk:
+            try:
+                old_slug = self.__class__.objects.get(pk=self.pk).slug
+            except self.__class__.DoesNotExist:
+                pass
+
+        # Agar slug bo‘sh bo‘lsa yoki oldin name o‘zgargan bo‘lsa → yangi slug yaratamiz
+        if not self.slug or old_slug != slugify(self.name):
+            base_slug = slugify(self.name)
+            slug = base_slug
+            counter = 1
+
+            # To‘qnashuvni oldini olish
+            while self.__class__.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            self.slug = slug
+
+        super().save(*args, **kwargs)
 
 # Tashkilot.
-class Organization(models.Model):
+class Organization(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True)
@@ -17,7 +50,7 @@ class Organization(models.Model):
 
 
 # Lavozim.
-class Structure(models.Model):
+class Structure(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
@@ -31,7 +64,7 @@ class Structure(models.Model):
         db_table = 'structure'
 
 # Departament.
-class Department(models.Model):
+class Department(AutoSlugMixin, models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.SET_NULL,null=True,blank=True)
     structure = models.ForeignKey(Structure, on_delete=models.SET_NULL, null=True, blank=True)
     name = models.CharField(max_length=200)
@@ -48,7 +81,7 @@ class Department(models.Model):
 
 
 # Boshqarma.
-class Directorate(models.Model):
+class Directorate(AutoSlugMixin, models.Model):
     department = models.ForeignKey(Department, on_delete=models.SET_NULL,null=True,blank=True)
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
@@ -64,7 +97,7 @@ class Directorate(models.Model):
 
 
 # Bo'lim.
-class Division(models.Model):
+class Division(AutoSlugMixin, models.Model):
     directorate = models.ForeignKey(Directorate, on_delete=models.SET_NULL,null=True,blank=True)
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
@@ -136,7 +169,7 @@ class Employee(models.Model):
 
 
 # Category.
-class Category(models.Model):
+class Category(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
@@ -151,7 +184,7 @@ class Category(models.Model):
         db_table = 'category'
 
 # Lavozim.
-class Condition(models.Model):
+class Condition(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
@@ -210,7 +243,6 @@ class Technics(models.Model):
 class Deed(models.Model):
     sender = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='sent_docs')
     receiver = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='received_docs')
-    file = models.FileField(upload_to='deed/')
     message = models.CharField(max_length=200, null=True, blank=True)
     STATUS = (
         ('approved', 'Tasdiqlandi'),
@@ -223,3 +255,11 @@ class Deed(models.Model):
 
     def __str__(self):
         return f"Dalolatnoma #{self.id} → {self.receiver}"
+
+
+class DeedFile(models.Model):
+    deed = models.ForeignKey(Deed, on_delete=models.SET_NULL,null=True,blank=True)
+    file = models.FileField(
+        upload_to='deed/',
+        validators=[validate_file_extension]  # ✔ validator shu yerga ulanadi
+    )
