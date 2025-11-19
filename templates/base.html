@@ -31,6 +31,36 @@
   <!-- Template Main CSS File -->
   <link href="{% static 'css/style.css' %}" rel="stylesheet">
 
+    <style>
+            /* Kengroq qilib qo'yish */
+    .notifications {
+        width: 380px !important;
+        max-height: 450px;
+        overflow-y: auto;
+        border-radius: 12px;
+        padding: 5px 0;
+    }
+
+    /* Har bir item */
+    .notification-item {
+        display: flex;
+        gap: 12px;
+        padding: 12px 16px;
+        transition: background 0.2s;
+    }
+
+    .notification-item:hover {
+        background: #f3f6ff;
+        cursor: pointer;
+    }
+
+    /* Iconlarni kattalashtirish */
+    .notification-item i {
+        font-size: 28px;
+        margin-top: 4px;
+    }
+    </style>
+
 </head>
 
 <body>
@@ -49,11 +79,63 @@
     <nav class="header-nav ms-auto">
       <ul class="d-flex align-items-center">
 
-        <li class="nav-item d-block d-lg-none">
-          <a class="nav-link nav-icon search-bar-toggle " href="#">
-            <i class="bi bi-search"></i>
-          </a>
-        </li><!-- End Search Icon-->
+        <li class="nav-item dropdown">
+
+            <a class="nav-link nav-icon" href="#" data-bs-toggle="dropdown" id="deed-bell">
+                <i class="bi bi-bell"></i>
+
+                {% if deed_notification_count > 0 %}
+                    <span class="badge bg-primary badge-number">
+                        {{ deed_notification_count }}
+                    </span>
+                {% endif %}
+            </a>
+
+            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow notifications">
+
+                <li class="dropdown-header d-flex justify-content-between align-items-center px-3">
+                    <span class="fw-bold">Sizdagi yangiliklar</span>
+                    <span class="badge bg-primary">{{ deed_notification_count }}</span>
+                </li>
+
+                <li><hr class="dropdown-divider"></li>
+
+                {% for d in deed_notifications %}
+                <li class="notification-item">
+
+                    <!-- ICON -->
+                    <i class="bi {{ d.notif_icon }}"></i>
+
+                    <div>
+                        <!-- Kimdan -->
+                        <h4 class="mb-1" style="font-size:16px;">
+                            {{ d.sender.user.get_full_name }}
+                        </h4>
+
+                        <!-- RECEIVER BO‘LSA: yangi hujjat -->
+                        {% if d.receiver.user.id == request.user.id and d.status == 'viewed' %}
+                            <p class="text-warning">Yangi dalolatnoma keldi</p>
+
+                        <!-- SENDER BO‘LSA: tasdiqlangan-->
+                        {% elif d.sender.user.id == request.user.id and d.status == 'approved' %}
+                            <p class="text-success">Yuborgan dalolatnomangiz tasdiqlandi</p>
+
+                        <!-- SENDER BO‘LSA: rad etilgan -->
+                        {% elif d.sender.user.id == request.user.id and d.status == 'rejected' %}
+                            <p class="text-danger">Yuborgan dalolatnomangiz rad etildi</p>
+                        {% endif %}
+
+                        <!-- vaqt -->
+                        <p class="small text-muted">{{ d.date_edit|timesince }} oldin</p>
+                    </div>
+
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                {% endfor %}
+            </ul>
+
+        </li>
+
 
         <li class="nav-item dropdown pe-3">
 
@@ -63,6 +145,8 @@
           </a><!-- End Profile Iamge Icon -->
 
           <ul class="dropdown-menu dropdown-menu-end dropdown-menu-arrow profile">
+
+
             <li class="dropdown-header">
               <h6>{{ user.get_full_name }}</h6>
               <span>{{ user.user.rank.name }}</span>
@@ -205,6 +289,15 @@
   <!-- Template Main JS File -->
   <script src="{% static 'js/main.js' %}"></script>
   <script src="{% static 'js/document.js' %}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const dropdown = document.querySelector('[data-bs-toggle="dropdown"]');
+
+    dropdown.addEventListener('shown.bs.dropdown', function () {
+        fetch("{% url 'deed_mark_seen' %}");
+    });
+});
+</script>
 </body>
 
 </html>

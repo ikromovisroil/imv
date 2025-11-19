@@ -241,8 +241,8 @@ class Technics(models.Model):
 
 
 class Deed(models.Model):
-    sender = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='sent_docs')
-    receiver = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='received_docs')
+    sender = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='sender')
+    receiver = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='received')
     message = models.CharField(max_length=200, null=True, blank=True)
     STATUS = (
         ('approved', 'Tasdiqlandi'),
@@ -250,8 +250,10 @@ class Deed(models.Model):
         ('viewed', 'Kutulmoqda'),
     )
     status = models.CharField(max_length=20, choices=STATUS, default='viewed')
+    sender_seen = models.BooleanField(default=False)  # 🔥 YANGI QATOR
     date_creat = models.DateField(auto_now_add=True)
     date_edit = models.DateField(auto_now=True)
+
 
     def __str__(self):
         return f"Dalolatnoma #{self.id} → {self.receiver}"

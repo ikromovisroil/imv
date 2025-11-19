@@ -22,13 +22,13 @@
                 {% elif d.status == 'rejected' %}
                     <span class="badge bg-danger">Rad etildi</span>
                 {% endif %}
-
-                <!-- O‘zi yuborgan bo‘lsa → tepaga, qabul qilgan bo‘lsa → pastga -->
-                {% if d.sender.employee.user == request.user %}
+                {% if d.sender.user == user %}
                     <i class="bi bi-arrow-up-circle-fill"></i>
-                {% else %}
+
+                {% elif d.receiver.user == user %}
                     <i class="bi bi-arrow-down-circle-fill"></i>
                 {% endif %}
+
             </td>
 
             <td>

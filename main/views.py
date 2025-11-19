@@ -34,6 +34,19 @@ def global_data(request):
     }
 
 
+def deed_mark_seen(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({'status': 'unauth'})
+
+    Deed.objects.filter(
+        sender__user=request.user,
+        status__in=['approved', 'rejected'],
+        sender_seen=False
+    ).update(sender_seen=True)
+
+    return JsonResponse({'status': 'ok'})
+
+
 @login_required
 def contact(request):
     context = {
@@ -46,11 +59,15 @@ def contact(request):
 def get_employee_files(request):
     emp_id = request.GET.get("employee_id")
 
-    deeds = Deed.objects.filter(receiver_id=emp_id).select_related(
-        "sender", "receiver"
-    ).order_by("-id")
+    deeds = Deed.objects.filter(
+        Q(receiver_id=emp_id) | Q(sender_id=emp_id)
+    ).select_related("sender", "receiver").order_by("-id")
 
-    html = render_to_string("main/employee_files.html", {"deeds": deeds})
+    html = render_to_string(
+        "main/employee_files.html",
+        {"deeds": deeds},
+        request=request   # ✔ request qo'shildi
+    )
     return JsonResponse({"html": html})
 
 
