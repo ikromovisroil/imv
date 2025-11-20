@@ -26,6 +26,8 @@ from django.template.loader import render_to_string
 from django.http import JsonResponse
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
+from docx2pdf import convert
+
 
 def global_data(request):
     return {
@@ -48,6 +50,30 @@ def deed_mark_seen(request):
 
 
 @login_required
+def deed_action(request, pk):
+    deed = get_object_or_404(Deed, pk=pk)
+
+    if request.method == "POST":
+        action = request.POST.get("action")              # approve / reject
+        msg_receiver = request.POST.get("message_receiver")
+
+        # agar modelingizda message_receiver bo‘lsa:
+        if hasattr(deed, "message_receiver"):
+            deed.message_receiver = msg_receiver
+
+        if action == "approve":
+            deed.status = "approved"
+            messages.success(request, "Dalolatnoma tasdiqlandi.")
+        elif action == "reject":
+            deed.status = "rejected"
+            messages.warning(request, "Dalolatnoma rad etildi.")
+
+        deed.save()  # MUHIM!
+
+    return HttpResponseRedirect(request.META.get("HTTP_REFERER", "/"))
+
+
+@login_required
 def contact(request):
     context = {
         'employee': Employee.objects.exclude(user=request.user)
@@ -55,23 +81,44 @@ def contact(request):
     return render(request, 'main/contact.html', context)
 
 
-@login_required
 def get_employee_files(request):
     emp_id = request.GET.get("employee_id")
 
-    deeds = Deed.objects.filter(
-        Q(receiver_id=emp_id) | Q(sender_id=emp_id)
-    ).select_related("sender", "receiver").order_by("-id")
+    # Hozirgi user'ga bog'langan Employee (related_name='user' bo'lgani uchun)
+    current_emp = getattr(request.user, "user", None)
+
+    if current_emp is None:
+        return JsonResponse({"html": "<p>Bu foydalanuvchi xodim emas</p>"})
+
+    try:
+        emp_id_int = int(emp_id)
+    except (TypeError, ValueError):
+        return JsonResponse({"html": "<p>Xodim noto‘g‘ri tanlandi</p>"})
+
+    # Tanlangan xodim (Employee)
+    try:
+        other_emp = Employee.objects.get(id=emp_id_int)
+    except Employee.DoesNotExist:
+        return JsonResponse({"html": "<p>Xodim topilmadi</p>"})
+
+    # Men → U yoki U → Men
+    deeds = (
+        Deed.objects.filter(
+            Q(sender_id=current_emp.id, receiver_id=other_emp.id)
+            | Q(sender_id=other_emp.id, receiver_id=current_emp.id)
+        )
+        .select_related("sender", "receiver")
+        .order_by("-id")
+    )
 
     html = render_to_string(
         "main/employee_files.html",
         {"deeds": deeds},
-        request=request   # ✔ request qo'shildi
+        request=request,
     )
     return JsonResponse({"html": html})
 
 
-@login_required
 def deed_post(request):
     if request.method != "POST":
         return redirect("contact")
@@ -91,7 +138,7 @@ def deed_post(request):
     deed = Deed.objects.create(
         sender=sender,
         receiver=receiver,
-        message=message,
+        message_sender=message,
         status="viewed"
     )
 
@@ -114,7 +161,6 @@ def deed_post(request):
         )
 
     return redirect("contact")
-
 
 
 @login_required
@@ -227,7 +273,6 @@ def technics(request, slug=None):
     return render(request, 'main/technics.html', context)
 
 
-@login_required
 def ajax_load_departments(request):
     org_id = request.GET.get('organization')
 
@@ -242,7 +287,6 @@ def ajax_load_departments(request):
     return JsonResponse(list(departments), safe=False)
 
 
-@login_required
 def ajax_load_directorate(request):
     dep_id = request.GET.get('department')
 
@@ -257,7 +301,6 @@ def ajax_load_directorate(request):
     return JsonResponse(list(directorate), safe=False)
 
 
-@login_required
 def ajax_load_division(request):
     dir_id = request.GET.get('directorate')
 
@@ -324,7 +367,6 @@ def organization(request, slug):
     return render(request, 'main/organization.html', context)
 
 
-@login_required
 def replace_text_in_textboxes(element, replacements):
     """
     DOCX fayldagi barcha text box (shape) ichidagi matnlarni almashtiradi.
@@ -338,7 +380,6 @@ def replace_text_in_textboxes(element, replacements):
                         child.text = text.replace(old, new)
 
 
-@login_required
 def get_technics_count(request):
     org_id = request.GET.get('org_id')
     dep_id = request.GET.get('dep_id')
@@ -389,7 +430,6 @@ def document_get(request):
     return render(request, 'main/document.html', context)
 
 
-@login_required
 def document_post(request):
     """POST so‘rovi uchun dalolatnoma yaratish"""
     oylar = [
@@ -500,7 +540,6 @@ def document_post(request):
     return response
 
 
-@login_required
 def ajax_load_technics(request):
     org_id = request.GET.get('organization') or None
     dep_id = request.GET.get('department') or None
@@ -566,7 +605,6 @@ def hisobot_get(request):
     return render(request, 'main/hisobot.html', context)
 
 
-@login_required
 def set_table_borders(table):
     tbl = table._tbl
 
@@ -595,7 +633,6 @@ def set_table_borders(table):
         element.set(qn('w:space'), '0')
 
 
-@login_required
 def set_cell_border(cell, **kwargs):
     """Word jadval hujayrasi atrofida chiziq (border) chizish uchun."""
     tc = cell._tc
@@ -611,7 +648,6 @@ def set_cell_border(cell, **kwargs):
             tcPr.append(element)
 
 
-@login_required
 def set_cell_text(cell, text, bold=False, center=False, size=11):
     cell.text = text or ''
     for p in cell.paragraphs:
@@ -622,7 +658,6 @@ def set_cell_text(cell, text, bold=False, center=False, size=11):
             run.bold = bold
 
 
-@login_required
 def create_table(doc, title, data, headers):
     """
     Jadvalni widths bo‘yicha yaratadi.
@@ -710,7 +745,6 @@ def create_table(doc, title, data, headers):
     return heading, table
 
 
-@login_required
 def hisobot_post(request):
     if request.method != 'POST':
         return redirect('hisobot_get')

@@ -39,8 +39,8 @@ class Organization(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User,on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -54,8 +54,8 @@ class Structure(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -70,8 +70,8 @@ class Department(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -86,8 +86,8 @@ class Directorate(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -102,8 +102,8 @@ class Division(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -118,8 +118,8 @@ class Rank(models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.name
@@ -140,8 +140,8 @@ class Employee(models.Model):
     phone = models.CharField(max_length=50,null=True,blank=True)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True, related_name='author')
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         # Agar division tanlangan bo‘lsa → directorate avtomatik to‘lsin
@@ -173,8 +173,8 @@ class Category(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
 
     def __str__(self):
@@ -188,8 +188,8 @@ class Condition(AutoSlugMixin, models.Model):
     name = models.CharField(max_length=200)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
 
     def __str__(self):
@@ -221,8 +221,8 @@ class Technics(models.Model):
     body = models.CharField(max_length=200, null=True, blank=True)
     is_active = models.BooleanField(default=True)
     author = models.ForeignKey(User, on_delete=models.SET_NULL,null=True,blank=True)
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def save(self, *args, **kwargs):
         if self.employee and self.status == "free":
@@ -243,7 +243,8 @@ class Technics(models.Model):
 class Deed(models.Model):
     sender = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='sender')
     receiver = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, related_name='received')
-    message = models.CharField(max_length=200, null=True, blank=True)
+    message_sender = models.CharField(max_length=200, null=True, blank=True)
+    message_receiver = models.CharField(max_length=200, null=True, blank=True)
     STATUS = (
         ('approved', 'Tasdiqlandi'),
         ('rejected', 'Rad etildi'),
@@ -251,9 +252,8 @@ class Deed(models.Model):
     )
     status = models.CharField(max_length=20, choices=STATUS, default='viewed')
     sender_seen = models.BooleanField(default=False)  # 🔥 YANGI QATOR
-    date_creat = models.DateField(auto_now_add=True)
-    date_edit = models.DateField(auto_now=True)
-
+    date_creat = models.DateTimeField(auto_now_add=True)
+    date_edit = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Dalolatnoma #{self.id} → {self.receiver}"

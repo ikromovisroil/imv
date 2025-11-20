@@ -4,33 +4,21 @@
         <tr>
             <th>Sana</th>
             <th>Izox</th>
-            <th>Xolati</th>
             <th>Fayllar</th>
+            <th>Xolati</th>
         </tr>
     </thead>
     <tbody>
         {% for d in deeds %}
         <tr>
-            <td>{{ d.date_creat }}</td>
-            <td>{{ d.message }}</td>
-
+            <td>{{ d.date_creat|default:"-" }}</td>
             <td>
-                {% if d.status == 'viewed' %}
-                    <span class="badge bg-warning">Kutulmoqda</span>
-                {% elif d.status == 'approved' %}
-                    <span class="badge bg-success">Tasdiqlandi</span>
-                {% elif d.status == 'rejected' %}
-                    <span class="badge bg-danger">Rad etildi</span>
+                {% if d.receiver.user == user %}
+                    {{ d.message_sender|default:"" }}
+                {% elif d.sender.user == user %}
+                    {{ d.message_receiver|default:"" }}
                 {% endif %}
-                {% if d.sender.user == user %}
-                    <i class="bi bi-arrow-up-circle-fill"></i>
-
-                {% elif d.receiver.user == user %}
-                    <i class="bi bi-arrow-down-circle-fill"></i>
-                {% endif %}
-
             </td>
-
             <td>
                 {% if d.deedfile_set.exists %}
                     {% for f in d.deedfile_set.all %}
@@ -38,6 +26,71 @@
                     {% endfor %}
                 {% else %}
                     —
+                {% endif %}
+            </td>
+            <td>
+                {% if d.status == 'viewed' %}
+                    {% if d.sender.user == user %}
+                        <!-- Yuboruvchi uchun faqat badge -->
+                        <span class="badge bg-warning">Kutulmoqda</span>
+                    {% elif d.receiver.user == user %}
+                        <!-- Qabul qiluvchi modal ochadi -->
+                        <span type="button"
+                              class="badge bg-warning"
+                              data-bs-toggle="modal"
+                              data-bs-target="#modal{{ d.id }}">
+                          Kutulmoqda
+                        </span>
+                        <div class="modal fade" id="modal{{ d.id }}" tabindex="-1">
+                          <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+
+                              <form method="post" action="{% url 'deed_action' d.id %}">
+                                {% csrf_token %}
+                                <div class="modal-header">
+                                  <h5 class="modal-title">{{ d.sender.user.get_full_name }}</h5>
+                                  <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                          aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                  <div class="col-md-12">
+                                    <label for="message_receiver_{{ d.id }}" class="form-label">Izoh</label>
+                                    <input type="text"
+                                           name="message_receiver"
+                                           id="message_receiver_{{ d.id }}"
+                                           class="form-control">
+                                  </div>
+                                </div>
+                                <div class="modal-footer justify-content-center">
+                                  <button type="submit"
+                                          name="action"
+                                          value="approve"
+                                          class="btn btn-primary">
+                                    Tasdiqlash
+                                  </button>
+                                  <button type="submit"
+                                          name="action"
+                                          value="reject"
+                                          class="btn btn-danger">
+                                    Rad etish
+                                  </button>
+                                </div>
+                              </form>
+
+                            </div>
+                          </div>
+                        </div>
+                    {% endif %}
+                {% elif d.status == 'approved' %}
+                    <span class="badge bg-success">Tasdiqlandi</span>
+                {% elif d.status == 'rejected' %}
+                    <span class="badge bg-danger">Rad etildi</span>
+                {% endif %}
+                <!-- Ikonka -->
+                {% if d.sender.user == user %}
+                    <i class="bi bi-arrow-up"></i>
+                {% else %}
+                    <i class="bi bi-arrow-down"></i>
                 {% endif %}
             </td>
         </tr>

@@ -3,6 +3,8 @@ from .views import *
 
 urlpatterns = [
     path('', index, name='index'),
+    path('deed/seen/', deed_mark_seen, name="deed_mark_seen"),
+    path("deed/<int:pk>/action/", deed_action, name="deed_action"),
     path('contact/', contact, name='contact'),
     path("get_employee_files/", get_employee_files, name="get_employee_files"),
     path('deed_post/', deed_post, name='deed_post'),
@@ -18,5 +20,4 @@ urlpatterns = [
     path('hisobot/', hisobot_get, name='hisobot_get'),
     path('hisobot/hisobot_post/', hisobot_post, name='hisobot_post'),
     path('hisobot/ajax/technics/', ajax_load_technics, name='ajax_load_technics'),
-    path('deed/seen/', deed_mark_seen, name="deed_mark_seen"),
 ]
