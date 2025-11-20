@@ -60,8 +60,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 CSRF_TRUSTED_ORIGINS = [
-    '192.168.120.142',
-    'report.imv.uz',
+    'http://192.168.120.142',
+    'https://192.168.120.142',
+    'http://report.imv.uz',
+    'https://report.imv.uz',
 ]
 
 # Database
