@@ -126,8 +126,8 @@ def deed_post(request):
     message = request.POST.get('message')
     receiver_id = request.POST.get("receiver_id")
 
-    sender = Employee.objects.filter(user=request.user).first()
-    receiver = Employee.objects.filter(id=receiver_id).first()
+    sender = Employee.objects.filter(user=request.user).first()if request.user else None
+    receiver = Employee.objects.filter(id=receiver_id).first()if receiver_id else None
 
     if not sender:
         return HttpResponse("Sender topilmadi", status=400)
