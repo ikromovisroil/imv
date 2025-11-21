@@ -14,7 +14,12 @@ SECRET_KEY = 'django-insecure-8^f&pe24#mu!=yqq*^r7k0w%z2$v43(q7cqa+*3$=u*k@e(uj9
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['192.168.120.142', 'report.imv.uz']
+ALLOWED_HOSTS = [
+    'report.imv.uz',
+    '192.168.120.142',
+    'localhost',
+    '127.0.0.1',
+]
 
 # Application definition
 INSTALLED_APPS = [
