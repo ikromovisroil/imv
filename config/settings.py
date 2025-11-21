@@ -88,7 +88,7 @@ DATABASES = {
         'USER': 'ivs_user',
         'PASSWORD': 'Ivs123!',
         'HOST': 'localhost',
-        'PORT': '',
+        'PORT': '5432',
     }
 }
 
