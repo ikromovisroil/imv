@@ -114,7 +114,7 @@
                         <!-- TEXNIKA NOMI -->
                         <td>
                             {% for t in techs %}
-                                {{ t.category }} ({{ t.name }})
+                                {{ t.category|default:"" }} ({{ t.name|default:"-" }})
                                 {% if not forloop.last %}
                                     <hr class="my-1">
                                 {% endif %}

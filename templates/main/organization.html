@@ -47,7 +47,7 @@
                                 <tr>
                                     {% if forloop.first %}
                                         <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
-                                        <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
+                                        <td rowspan="{{ techs.count }}">{{ emp.rank|default:"" }}</td>
                                         <td rowspan="{{ techs.count }}">
                                             {% if emp.user %}
                                                 {{ emp.user.get_full_name }}
@@ -57,11 +57,11 @@
                                         </td>
                                     {% endif %}
                                     <td>{{ tech.category }} ({{ tech.name }})</td>
-                                    <td>{{ tech.inventory }}</td>
-                                    <td>{{ tech.serial }}</td>
-                                    <td>{{ tech.ip }}</td>
-                                    <td>{{ tech.moc }}</td>
-                                    <td>{{ tech.year }}</td>
+                                    <td>{{ tech.inventory|default:"-" }}</td>
+                                    <td>{{ tech.serial|default:"-" }}</td>
+                                    <td>{{ tech.ip|default:"-" }}</td>
+                                    <td>{{ tech.moc|default:"-" }}</td>
+                                    <td>{{ tech.year|default:"-" }}</td>
                                 </tr>
                                 {% endfor %}
                             {% else %}
@@ -111,7 +111,7 @@
                                             <tr>
                                                 {% if forloop.first %}
                                                     <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
-                                                    <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
+                                                    <td rowspan="{{ techs.count }}">{{ emp.rank|default:"" }}</td>
                                                     <td rowspan="{{ techs.count }}">
                                                         {% if emp.user %}
                                                             {{ emp.user.get_full_name }}
@@ -120,12 +120,12 @@
                                                         {% endif %}
                                                     </td>
                                                 {% endif %}
-                                                <td>{{ tech.category }} ({{ tech.name }})</td>
-                                                <td>{{ tech.inventory }}</td>
-                                                <td>{{ tech.serial }}</td>
-                                                <td>{{ tech.ip }}</td>
-                                                <td>{{ tech.moc }}</td>
-                                                <td>{{ tech.year }}</td>
+                                                <td>{{ tech.category|default:"" }} ({{ tech.name|default:"-" }})</td>
+                                                <td>{{ tech.inventory|default:"-" }}</td>
+                                                <td>{{ tech.serial|default:"-" }}</td>
+                                                <td>{{ tech.ip|default:"-" }}</td>
+                                                <td>{{ tech.moc|default:"-" }}</td>
+                                                <td>{{ tech.year|default:"-" }}</td>
                                             </tr>
                                             {% endfor %}
                                         {% else %}
@@ -176,7 +176,7 @@
                                                     <tr>
                                                         {% if forloop.first %}
                                                             <td rowspan="{{ techs.count }}">{{ forloop.parentloop.counter }}</td>
-                                                            <td rowspan="{{ techs.count }}">{{ emp.rank }}</td>
+                                                            <td rowspan="{{ techs.count }}">{{ emp.rank|default:"" }}</td>
                                                             <td rowspan="{{ techs.count }}">
                                                                 {% if emp.user %}
                                                                     {{ emp.user.get_full_name }}
@@ -185,12 +185,12 @@
                                                                 {% endif %}
                                                             </td>
                                                         {% endif %}
-                                                        <td>{{ tech.category }} ({{ tech.name }})</td>
-                                                        <td>{{ tech.inventory }}</td>
-                                                        <td>{{ tech.serial }}</td>
-                                                        <td>{{ tech.ip }}</td>
-                                                        <td>{{ tech.moc }}</td>
-                                                        <td>{{ tech.year }}</td>
+                                                        <td>{{ tech.category|default:"" }} ({{ tech.name|default:"-" }})</td>
+                                                        <td>{{ tech.inventory|default:"-" }}</td>
+                                                        <td>{{ tech.serial|default:"-" }}</td>
+                                                        <td>{{ tech.ip|default:"-" }}</td>
+                                                        <td>{{ tech.moc|default:"-" }}</td>
+                                                        <td>{{ tech.year|default:"-" }}</td>
                                                     </tr>
                                                     {% endfor %}
                                                 {% else %}
